@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Invoice Management{% endblock %}</title>
+    <style>
+        body { 
+            font-family: Arial, sans-serif; 
+            background-color: #f5f5f5; 
+            margin: 0; 
+            padding: 0; 
+        }
+        .navbar {
+            background-color: #418FAE; /* Navbar background color */
+            padding: 10px 20px;
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .navbar a {
+            color: white;
+            text-decoration: none;
+            margin-right: 15px;
+            font-weight: bold;
+            font-size: 16px;
+        }
+        .navbar a:hover {
+            text-decoration: underline;
+        }
+        .navbar .nav-links {
+            display: flex;
+            align-items: center;
+        }
+        .navbar .user-info {
+            margin-right: 15px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+        .container { 
+            max-width: 800px; 
+            margin: 50px auto; 
+            padding: 20px; 
+            background-color: #fff; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        }
+        h1, h2 { 
+            text-align: center; 
+            color: #418FAE; /* Green color for headers */
+        }
+        .upload-section {
+            background-color: #D7F9FD; /* Light green background */
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .upload-section button {
+            background-color: #418FAE;  /* Green button */
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .upload-section button:hover {
+            background-color: #367A92; /* Slightly darker green on hover */
+        }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        table, th, td { border: 1px solid #ddd; }
+        th, td { padding: 12px; text-align: center; }
+        th { background-color: #418FAE; color: white; }
+        tr:nth-child(odd) { background-color: #f2f2f2; }
+        .button-container { text-align: center; margin-top: 20px; }
+        .confirm-button { padding: 10px 20px; font-size: 16px; color: white; background-color: #418FAE; border: none; border-radius: 5px; cursor: pointer; }
+        .confirm-button:hover { background-color: #367A92; }
+        .small-chart {
+            width: 200px;    /* Width of the chart */
+            height: 200px;   /* Height of the chart */
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <div class="navbar">
+        {% comment %} <div class="logo">
+            <a href="{% url 'index' %}">Invoice Management</a>
+        </div> {% endcomment %}
+        <div>
+            {% if user.is_authenticated %}
+                <span class="user-info">Welcome, {{ user.username }}!</span>
+            {% else %}
+                <span class="user-info">Welcome to ExpensifyAI!</span>
+            {% endif %}
+        </div>
+        <div class="nav-links">
+            {% if user.is_authenticated %}
+                {% comment %} <span class="user-info">Welcome, {{ user.username }}!</span> {% endcomment %}
+                <a href="{% url 'index' %}">Home</a>
+                <a href="{% url 'recent_expenses' %}">Recent Expenses</a>
+                <a href="{% url 'logout' %}">Logout</a>
+            {% else %}
+                {% comment %} <a href="{% url 'login' %}">Login</a> {% endcomment %}
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="container">
+        {% block content %}{% endblock %}
+    </div>
+
+</body>
+</html>

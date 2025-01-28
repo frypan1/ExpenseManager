@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}
+    Login - Invoice Management
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h1>Login</h1>
+    <form method="post">
+        {% csrf_token %}
+        <div style="margin-bottom: 15px;">
+            <label for="username" style="display: block; font-weight: bold;">Username:</label>
+            <input type="text" id="username" name="username" required 
+                   style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
+                   placeholder="Enter your username">
+        </div>
+        <div style="margin-bottom: 15px;">
+            <label for="password" style="display: block; font-weight: bold;">Password:</label>
+            <input type="password" id="password" name="password" required 
+                   style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
+                   placeholder="Enter your password">
+        </div>
+        <div class="button-container">
+            <button type="submit" class="confirm-button">&nbsp;Login &nbsp;</button>
+        </div>
+    </form>
+
+    <div class="button-container" style="margin-top: 20px;">
+        <p>Don't have an account?</p>
+        <a href="{% url 'register' %}">
+            <button type="button" class="confirm-button">Sign Up</button>
+        </a>
+    </div>
+</div>
+{% endblock %}
