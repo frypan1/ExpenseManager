@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -129,8 +130,13 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-OPENAI_API_KEY = ""
 
 LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/index/'
 LOGOUT_REDIRECT_URL = '/login/'
+
+env_path = BASE_DIR / '.env'
+if env_path.exists():
+    load_dotenv(env_path)
+
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
