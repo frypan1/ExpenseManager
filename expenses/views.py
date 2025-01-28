@@ -694,3 +694,5 @@ def delete_expense(request, expense_id):
         expense.delete()
         return redirect('recent_expenses')
     return render(request, 'confirm_delete.html', {'expense': expense})
+
+#adding another comment 
