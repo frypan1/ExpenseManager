@@ -536,6 +536,7 @@ def index(request):
 
             # Perform OCR on the uploaded image to extract text
             extracted_text = perform_ocr(file_path)
+            print(extracted_text)
             extracted_details_text = extract_invoice_details(extracted_text)
 
             if extracted_details_text:
@@ -603,6 +604,7 @@ def extract_invoice_details(invoice_text):
             max_tokens=300,
             temperature=0.3,
         )
+        print(response.choices[0].text.strip())
         return response.choices[0].text.strip()
 
     except Exception as e:
@@ -692,3 +694,5 @@ def delete_expense(request, expense_id):
         expense.delete()
         return redirect('recent_expenses')
     return render(request, 'confirm_delete.html', {'expense': expense})
+
+#Hello World
