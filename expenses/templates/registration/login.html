@@ -7,25 +7,59 @@
 {% block content %}
 <div class="container">
     <h1>Login</h1>
-    <form method="post">
+    <form method="post" action="{% url 'login' %}">
         {% csrf_token %}
+        
+        <!-- Username Field -->
         <div style="margin-bottom: 15px;">
             <label for="username" style="display: block; font-weight: bold;">Username:</label>
             <input type="text" id="username" name="username" required 
                    style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
-                   placeholder="Enter your username">
+                   placeholder="Enter your username" value="{{ form.username.value|default:'' }}">
+            
+            <!-- Display username errors -->
+            {% if form.username.errors %}
+                <ul style="color: red; margin-top: 5px;">
+                    {% for error in form.username.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </div>
+        
+        <!-- Password Field -->
         <div style="margin-bottom: 15px;">
             <label for="password" style="display: block; font-weight: bold;">Password:</label>
             <input type="password" id="password" name="password" required 
                    style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
                    placeholder="Enter your password">
+            
+            <!-- Display password errors -->
+            {% if form.password.errors %}
+                <ul style="color: red; margin-top: 5px;">
+                    {% for error in form.password.errors %}
+                        <li>{{ error }}</li>
+                    {% endfor %}
+                </ul>
+            {% endif %}
         </div>
+        
+        <!-- Non-field errors (e.g., invalid credentials) -->
+        {% if form.non_field_errors %}
+            <ul style="color: red; margin-bottom: 15px;">
+                {% for error in form.non_field_errors %}
+                    <li>{{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
+
+        <!-- Submit Button -->
         <div class="button-container">
             <button type="submit" class="confirm-button">&nbsp;Login &nbsp;</button>
         </div>
     </form>
 
+    <!-- Redirect to Register -->
     <div class="button-container" style="margin-top: 20px;">
         <p>Don't have an account?</p>
         <a href="{% url 'register' %}">

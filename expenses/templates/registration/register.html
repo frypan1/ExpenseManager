@@ -16,6 +16,9 @@
             <input type="text" id="username" name="username" required 
                    style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
                    placeholder="Enter your username">
+            {% if form.username.errors %}
+                <div style="color: red; margin-top: 5px;">{{ form.username.errors.0 }}</div>
+            {% endif %}
         </div>
         
         <!-- Email Field -->
@@ -24,6 +27,9 @@
             <input type="email" id="email" name="email" required 
                    style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
                    placeholder="Enter your email">
+            {% if form.email.errors %}
+                <div style="color: red; margin-top: 5px;">{{ form.email.errors.0 }}</div>
+            {% endif %}
         </div>
         
         <!-- Password Field -->
@@ -32,6 +38,9 @@
             <input type="password" id="password1" name="password1" required 
                    style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
                    placeholder="Enter your password">
+            {% if form.password1.errors %}
+                <div style="color: red; margin-top: 5px;">{{ form.password1.errors.0 }}</div>
+            {% endif %}
         </div>
         
         <!-- Confirm Password Field -->
@@ -40,15 +49,17 @@
             <input type="password" id="password2" name="password2" required 
                    style="width: calc(100% - 22px); padding: 10px; border: 1px solid #ddd; border-radius: 5px;"
                    placeholder="Confirm your password">
+            {% if form.password2.errors %}
+                <div style="color: red; margin-top: 5px;">{{ form.password2.errors.0 }}</div>
+            {% endif %}
         </div>
         
         <!-- Submit Button -->
         <div class="button-container">
-            <button type="submit" class="confirm-button">Register</button>
+            <button type="submit" class="confirm-button">&nbsp;Register&nbsp;</button>
         </div>
     </form>
 
-    <!-- Redirect to Login -->
     <div class="button-container" style="margin-top: 20px;">
         <p>Already have an account?</p>
         <a href="{% url 'login' %}">
