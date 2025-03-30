@@ -236,3 +236,145 @@ def delete_expense(request, expense_id):
     return render(request, 'confirm_delete.html', {'expense': expense})
 
 #hello
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from .models import Expense  # Replace Transaction with Expense
+
+@login_required
+def get_user_categories(request):
+    # Get distinct category names from the user's transaction history
+    categories = Expense.objects.filter(user=request.user).values_list('category__name', flat=True).distinct()
+    return JsonResponse({"categories": list(categories)})
+
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from .models import Expense
+from django.db.models.functions import ExtractYear
+
+@login_required
+def get_user_years(request):
+    # Extract distinct years from user's transactions
+    years = Expense.objects.filter(user=request.user).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('-year')
+    return JsonResponse({"years": list(years)})
+
+
+import json
+import io
+import matplotlib.pyplot as plt
+import pandas as pd
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image, Paragraph
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from expenses.models import Expense
+from django.db.models import Sum
+
+@login_required
+def generate_report(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+
+        # Get user transactions based on filters
+        user = request.user
+        transactions = Expense.objects.filter(user=user)
+
+        if data["dateFilter"] == "yearly":
+            transactions = transactions.filter(date__year=data["year"])
+        elif data["dateFilter"] == "monthly":
+            transactions = transactions.filter(date__year=data["year"], date__month=data["month"])
+        elif data["dateFilter"] == "custom":
+            transactions = transactions.filter(date__range=[data["fromDate"], data["toDate"]])
+
+        if "all" not in data["categories"]:
+            transactions = transactions.filter(category__name__in=data["categories"])
+
+        if not transactions.exists():
+            return HttpResponse("No transactions found for the selected filters.", status=400)
+        
+        print(f"Total transactions found: {transactions.count()}")
+        for t in transactions:
+            print(t.date, t.category.name, t.amount)
+
+        # Convert transactions to DataFrame
+        df = pd.DataFrame(list(transactions.values("date", "product_name", "amount")))
+        df["amount"] = df["amount"].astype(float)
+        # ✅ Convert 'amount' column to numeric (removing currency symbols if present)
+        df["amount"] = df["amount"].replace("[₹,]", "", regex=True).astype(float)
+
+
+        # Generate Pie Chart
+        category_totals = transactions.values("category__name").annotate(total=Sum("amount"))
+        plt.figure(figsize=(6, 4))
+        plt.pie(
+            [x["total"] for x in category_totals], 
+            labels=[x["category__name"] for x in category_totals], 
+            autopct='%1.1f%%', startangle=140
+        )
+        plt.title("Expenses by Category")
+        pie_chart = io.BytesIO()
+        plt.savefig(pie_chart, format="png")
+        plt.close()
+
+        # Generate Bar Chart
+        df_grouped = df.groupby("date").sum()
+        plt.figure(figsize=(6, 4))
+        df_grouped["amount"].plot(kind="bar", color="skyblue")
+        plt.xlabel("Date")
+        plt.ylabel("Total Expenses")
+        plt.title("Expenses Over Time")
+        bar_chart = io.BytesIO()
+        plt.savefig(bar_chart, format="png")
+        plt.close()
+
+        # Reset buffer positions
+        pie_chart.seek(0)
+        bar_chart.seek(0)
+
+        # Generate PDF
+        buffer = io.BytesIO()
+        pdf = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+
+        styles = getSampleStyleSheet()
+        elements.append(Paragraph("Expense Report", styles["Title"]))
+
+        # Add Pie Chart
+        pie_img = Image(pie_chart, width=300, height=200)
+        elements.append(Paragraph("Expenses by Category", styles["Heading2"]))
+        elements.append(pie_img)
+
+        # Add Bar Chart
+        bar_img = Image(bar_chart, width=300, height=200)
+        elements.append(Paragraph("Expenses Over Time", styles["Heading2"]))
+        elements.append(bar_img)
+
+        # Add Transaction Table
+        table_data = [["Date", "Product", "Amount"]]
+        table_data += df.values.tolist()
+        table = Table(table_data)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (0, 0), (-1, 0), colors.grey),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.whitesmoke),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+        ]))
+
+        elements.append(Paragraph("Transaction Details", styles["Heading2"]))
+        elements.append(table)
+
+        pdf.build(elements)
+        buffer.seek(0)
+
+        response = HttpResponse(buffer, content_type="application/pdf")
+        response["Content-Disposition"] = "attachment; filename=expense_report.pdf"
+        return response
+
+    return HttpResponse("Invalid request", status=400)
+

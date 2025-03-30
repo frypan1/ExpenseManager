@@ -120,4 +120,205 @@
     });
 </script>
 
+<!-- Generate Report Button -->
+<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#reportModal">
+    Generate Report
+</button>
+
+<!-- Bootstrap Modal for Filters -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="reportModalLabel">Generate Report</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="reportFilterForm">
+                    <!-- Date Filters -->
+                    <label for="dateFilter">Select Date Range:</label>
+                    <select id="dateFilter" class="form-select">
+                        <option value="yearly">Yearly</option>
+                        <option value="monthly">Monthly</option>
+                        <option value="custom">Custom Date Range</option>
+                    </select>
+                
+                    <!-- Year Selection Dropdown -->
+<select id="yearInput" class="form-select mt-2" style="display: none;">
+    <option selected disabled>Loading...</option>
+</select>
+                    <select id="monthInput" class="form-select mt-2" style="display: none;">
+                        <option value="01">January</option>
+                        <option value="02">February</option>
+                        <option value="03">March</option>
+                        <option value="04">April</option>
+                        <option value="05">May</option>
+                        <option value="06">June</option>
+                        <option value="07">July</option>
+                        <option value="08">August</option>
+                        <option value="09">September</option>
+                        <option value="10">October</option>
+                        <option value="11">November</option>
+                        <option value="12">December</option>
+                    </select>
+                    <input type="date" id="fromDate" class="form-control mt-2" style="display: none;">
+                    <input type="date" id="toDate" class="form-control mt-2" style="display: none;">
+                    
+                    <!-- Category Filter with Checkboxes -->
+                    <label class="mt-3">Select Categories:</label>
+                    <div id="categoryCheckboxes" class="form-check">
+                        <input type="checkbox" id="allCategories" class="form-check-input" value="all" checked>
+                        <label for="allCategories" class="form-check-label">All</label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-success" id="downloadReport">Download</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        // Restrict date inputs to prevent future dates
+        let today = new Date().toISOString().split("T")[0];
+        document.getElementById("fromDate").setAttribute("max", today);
+        document.getElementById("toDate").setAttribute("max", today);
+
+        // Handle Date Filter Change
+        document.getElementById("dateFilter").addEventListener("change", function () {
+            let selectedValue = this.value;
+            document.getElementById("yearInput").style.display = selectedValue === "yearly" ? "block" : "none";
+            document.getElementById("monthInput").style.display = selectedValue === "monthly" ? "block" : "none";
+            document.getElementById("fromDate").style.display = selectedValue === "custom" ? "block" : "none";
+            document.getElementById("toDate").style.display = selectedValue === "custom" ? "block" : "none";
+        });
+         // Fetch Categories Dynamically from Backend
+        fetch("/api/get-user-categories/")
+            .then(response => response.json())
+            .then(data => {
+                let categories = data.categories;
+                let categoryContainer = document.getElementById("categoryCheckboxes");
+                categories.forEach(category => {
+                    let div = document.createElement("div");
+                    div.classList.add("form-check");
+                    div.innerHTML = `
+                        <input type="checkbox" class="form-check-input category-option" value="${category}">
+                        <label class="form-check-label">${category}</label>
+                    `;
+                    categoryContainer.appendChild(div);
+                });
+            })
+            .catch(error => console.error("Error fetching categories:", error));
+
+        
+        // Handle 'All' Category Selection
+        document.getElementById("allCategories").addEventListener("change", function() {
+            let allChecked = this.checked;
+            document.querySelectorAll(".category-option").forEach(checkbox => {
+                checkbox.checked = allChecked;
+            });
+        });
+
+        document.querySelectorAll(".category-option").forEach(checkbox => {
+            checkbox.addEventListener("change", function() {
+                if (!this.checked) {
+                    document.getElementById("allCategories").checked = false;
+                }
+            });
+        });
+
+
+        // Handle Download Button Click
+        document.getElementById("downloadReport").addEventListener("click", function () {
+            let selectedDateFilter = document.getElementById("dateFilter").value;
+            let selectedCategories = Array.from(document.querySelectorAll(".category-option:checked")).map(cb => cb.value);
+            
+            let filterData = { dateFilter: selectedDateFilter, categories: selectedCategories };
+            if (selectedDateFilter === "yearly") filterData.year = document.getElementById("yearInput").value;
+            if (selectedDateFilter === "monthly") filterData.month = document.getElementById("monthInput").value;
+            if (selectedDateFilter === "custom") {
+                filterData.fromDate = document.getElementById("fromDate").value;
+                filterData.toDate = document.getElementById("toDate").value;
+            }
+            
+            console.log("Generating report with filters: ", filterData);
+            // Send to backend (to be implemented in Django)
+        });
+    });
+
+   
+
+document.addEventListener("DOMContentLoaded", function () {
+    fetch("/api/get-user-years/")
+        .then(response => response.json())
+        .then(data => {
+            let yearDropdown = document.getElementById("yearInput"); // Ensure this ID matches your select element
+            yearDropdown.innerHTML = "";  // Clear previous options
+
+            if (data.years.length > 0) {
+                data.years.forEach(year => {
+                    let option = document.createElement("option");
+                    option.value = year;
+                    option.textContent = year;
+                    yearDropdown.appendChild(option);
+                });
+            } else {
+                let option = document.createElement("option");
+                option.textContent = "No transactions found";
+                option.disabled = true;
+                yearDropdown.appendChild(option);
+            }
+        })
+        .catch(error => console.error("Error fetching years:", error));
+});
+
+
+document.getElementById("downloadReport").addEventListener("click", function () {
+    let selectedDateFilter = document.getElementById("dateFilter").value;
+    let selectedCategories = Array.from(document.querySelectorAll(".category-option:checked")).map(cb => cb.value);
+
+    let filterData = { dateFilter: selectedDateFilter, categories: selectedCategories };
+
+    if (selectedDateFilter === "yearly") {
+        filterData.year = document.getElementById("yearInput").value;
+    }
+    if (selectedDateFilter === "monthly") {
+        filterData.year = document.getElementById("yearInput").value;
+        filterData.month = document.getElementById("monthInput").value;
+    }
+    if (selectedDateFilter === "custom") {
+        filterData.fromDate = document.getElementById("fromDate").value;
+        filterData.toDate = document.getElementById("toDate").value;
+    }
+
+    // Send to backend for PDF generation
+    fetch("/generate-report/", {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": "{{ csrf_token }}"
+        },
+        body: JSON.stringify(filterData)
+    })
+    .then(response => response.blob())
+    .then(blob => {
+        let url = window.URL.createObjectURL(blob);
+        let a = document.createElement("a");
+        a.href = url;
+        a.download = "expense_report.pdf";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+    })
+    .catch(error => console.error("Error generating report:", error));
+});
+
+
+
+</script>
+
+
 {% endblock %}
