@@ -234,4 +234,194 @@ def delete_expense(request, expense_id):
         expense.delete()
         return redirect('recent_expenses')
     return render(request, 'confirm_delete.html', {'expense': expense})
-#comment 
+
+#hello
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from .models import Expense  # Replace Transaction with Expense
+
+@login_required
+def get_user_categories(request):
+    # Get distinct category names from the user's transaction history
+    categories = Expense.objects.filter(user=request.user).values_list('category__name', flat=True).distinct()
+    return JsonResponse({"categories": list(categories)})
+
+
+from django.http import JsonResponse
+from django.contrib.auth.decorators import login_required
+from .models import Expense
+from django.db.models.functions import ExtractYear
+
+@login_required
+def get_user_years(request):
+    # Extract distinct years from user's transactions
+    years = Expense.objects.filter(user=request.user).annotate(year=ExtractYear('date')).values_list('year', flat=True).distinct().order_by('-year')
+    return JsonResponse({"years": list(years)})
+
+
+import json
+import io
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np  # Added NumPy import for color mapping
+from django.http import HttpResponse
+from django.contrib.auth.decorators import login_required
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Image, Paragraph, Spacer, Flowable
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from expenses.models import Expense
+from django.db.models import Sum
+
+
+class SpacerFlowable(Flowable):
+    def __init__(self, height):
+        Flowable.__init__(self)
+        self.height = height
+    
+    def draw(self):
+        pass
+
+    def wrap(self, availWidth, availHeight):
+        return (availWidth, self.height)
+
+@login_required
+def generate_report(request):
+    if request.method == "POST":
+        data = json.loads(request.body)
+        user = request.user
+        transactions = Expense.objects.filter(user=user)
+
+        if data["dateFilter"] == "yearly":
+            transactions = transactions.filter(date__year=data["year"])
+        elif data["dateFilter"] == "monthly":
+            transactions = transactions.filter(date__year=data["year"], date__month=data["month"])
+        elif data["dateFilter"] == "custom":
+            transactions = transactions.filter(date__range=[data["fromDate"], data["toDate"]])
+
+        if "all" not in data["categories"]:
+            transactions = transactions.filter(category__name__in=data["categories"])
+
+        if not transactions.exists():
+            return HttpResponse("No transactions found for the selected filters.", status=400)
+        
+        # Convert transactions to DataFrame
+        df = pd.DataFrame(list(transactions.values("date", "product_name", "amount")))
+        df["date"] = pd.to_datetime(df["date"]).dt.strftime('%Y-%m-%d')  # Remove timestamp
+        df["amount"] = df["amount"].astype(float)
+        
+        # Enhanced Pie Chart with vibrant colors
+        category_totals = transactions.values("category__name").annotate(total=Sum("amount"))
+        plt.figure(figsize=(6, 4))
+        colors_pie = plt.cm.Pastel1.colors
+        plt.pie(
+            [x["total"] for x in category_totals],
+            labels=[x["category__name"] for x in category_totals],
+            autopct='%1.1f%%',
+            startangle=140,
+            colors=colors_pie,
+            wedgeprops={'edgecolor': 'black'},
+            textprops={'fontsize': 11}
+        )
+        #plt.title("Expenses by Category", fontsize=14)
+        pie_chart = io.BytesIO()
+        plt.savefig(pie_chart, format="png", bbox_inches='tight')
+        plt.close()
+        pie_chart.seek(0)
+        
+        # Enhanced Bar Chart with gradient colors and rounded edges
+        df_grouped = df.groupby("date").sum()
+        plt.figure(figsize=(8, 4))
+        bars = plt.bar(df_grouped.index.astype(str), df_grouped["amount"], color=plt.cm.viridis(np.linspace(0.3, 0.8, len(df_grouped))), edgecolor="black")
+        plt.xlabel("Date", fontsize=12, fontweight='bold')
+        plt.ylabel("Total Expenses", fontsize=12, fontweight='bold')
+        #plt.title("Expenses Over Time", fontsize=14, fontweight='bold')
+        plt.grid(axis='y', linestyle='--', alpha=0.5)
+        
+        # Adjust x-axis date formatting
+        plt.xticks(rotation=45)
+        plt.tight_layout()
+        
+        for bar in bars:
+            bar.set_linewidth(1.5)
+            bar.set_edgecolor('black')
+        
+        bar_chart = io.BytesIO()
+        plt.savefig(bar_chart, format="png", bbox_inches='tight')
+        plt.close()
+        bar_chart.seek(0)
+        
+        # Generate PDF
+        buffer = io.BytesIO()
+        pdf = SimpleDocTemplate(buffer, pagesize=letter, topMargin=20, bottomMargin=20, leftMargin=30, rightMargin=30)
+        elements = []
+        styles = getSampleStyleSheet()
+        
+        # Custom Font Styles
+        title_style = ParagraphStyle(
+            'TitleStyle',
+            parent=styles['Title'],
+            fontName='Helvetica-Bold',
+            fontSize=18,
+            textColor=colors.darkblue
+        )
+        heading_style = ParagraphStyle(
+            'HeadingStyle',
+            parent=styles['Heading2'],
+            fontName='Helvetica-Bold',
+            fontSize=14,
+            textColor=colors.navy
+        )
+        caption_style = ParagraphStyle(
+            'CaptionStyle',
+            parent=styles['BodyText'],
+            fontName='Helvetica-Oblique',
+            fontSize=10,
+            textColor=colors.grey
+        )
+        
+        # Title with enhanced styling
+        elements.append(Paragraph("Expense Report", title_style))
+        elements.append(SpacerFlowable(5))
+        
+        # Display charts one above the other with captions
+        pie_img = Image(pie_chart, width=400, height=300)
+        bar_img = Image(bar_chart, width=400, height=300)
+        elements.append(Paragraph("Expenses by Category", heading_style))
+        elements.append(pie_img)
+        elements.append(Paragraph("(Pie chart showing the distribution of expenses by category)", caption_style))
+        elements.append(SpacerFlowable(10))
+        
+        elements.append(Paragraph("Expenses Over Time", heading_style))
+        elements.append(bar_img)
+        elements.append(Paragraph("(Bar chart showing the trend of expenses over time)", caption_style))
+        elements.append(SpacerFlowable(20))
+        
+        # Transaction Table with alternating row colors
+        table_data = [["Date", "Product", "Amount"]] + df.values.tolist()
+        table = Table(table_data)
+        table.setStyle(TableStyle([
+            ("BACKGROUND", (1, 1), (-1, 0), colors.darkblue),
+            ("TEXTCOLOR", (0, 0), (-1, 0), colors.black),
+            ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("BOTTOMPADDING", (0, 0), (-1, 0), 12),
+            ("BACKGROUND", (0, 1), (-1, -1), colors.beige),
+            ("GRID", (0, 0), (-1, -1), 1, colors.black),
+            ("ROWBACKGROUNDS", (1, 0), (-1, -1), [colors.white, colors.lightgrey])
+        ]))
+        elements.append(Paragraph("Transaction Details", heading_style))
+        elements.append(SpacerFlowable(10))
+        elements.append(table)
+        
+        pdf.build(elements)
+        buffer.seek(0)
+        
+        response = HttpResponse(buffer.getvalue(), content_type="application/pdf")
+        response["Content-Disposition"] = "attachment; filename=expense_report.pdf"
+        buffer.close()
+        return response
+
+    return HttpResponse("Invalid request", status=400)
