@@ -273,6 +273,9 @@ from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from expenses.models import Expense
 from django.db.models import Sum
+import matplotlib
+matplotlib.use("Agg")  # Use non-GUI backend
+import matplotlib.pyplot as plt
 
 
 class SpacerFlowable(Flowable):
