@@ -231,22 +231,7 @@
         });
 
 
-        // Handle Download Button Click
-        document.getElementById("downloadReport").addEventListener("click", function () {
-            let selectedDateFilter = document.getElementById("dateFilter").value;
-            let selectedCategories = Array.from(document.querySelectorAll(".category-option:checked")).map(cb => cb.value);
-            
-            let filterData = { dateFilter: selectedDateFilter, categories: selectedCategories };
-            if (selectedDateFilter === "yearly") filterData.year = document.getElementById("yearInput").value;
-            if (selectedDateFilter === "monthly") filterData.month = document.getElementById("monthInput").value;
-            if (selectedDateFilter === "custom") {
-                filterData.fromDate = document.getElementById("fromDate").value;
-                filterData.toDate = document.getElementById("toDate").value;
-            }
-            
-            console.log("Generating report with filters: ", filterData);
-            // Send to backend (to be implemented in Django)
-        });
+        
     });
 
    
@@ -276,45 +261,62 @@ document.addEventListener("DOMContentLoaded", function () {
 });
 
 
+
 document.getElementById("downloadReport").addEventListener("click", function () {
-    let selectedDateFilter = document.getElementById("dateFilter").value;
-    let selectedCategories = Array.from(document.querySelectorAll(".category-option:checked")).map(cb => cb.value);
+    const dateFilter = document.getElementById("dateFilter").value;
+    const selectedCategories = Array.from(document.querySelectorAll(".category-option:checked")).map(cb => cb.value);
+    const year = document.getElementById("yearInput").value;
+    const month = document.getElementById("monthInput").value;
+    const fromDate = document.getElementById("fromDate").value;
+    const toDate = document.getElementById("toDate").value;
 
-    let filterData = { dateFilter: selectedDateFilter, categories: selectedCategories };
+    let filterData = {
+        dateFilter: dateFilter,
+        categories: selectedCategories,
+    };
 
-    if (selectedDateFilter === "yearly") {
-        filterData.year = document.getElementById("yearInput").value;
+    if (dateFilter === "yearly") {
+        filterData.year = year;
     }
-    if (selectedDateFilter === "monthly") {
-        filterData.year = document.getElementById("yearInput").value;
-        filterData.month = document.getElementById("monthInput").value;
+    if (dateFilter === "monthly") {
+        filterData.year = year;
+        filterData.month = month;
     }
-    if (selectedDateFilter === "custom") {
-        filterData.fromDate = document.getElementById("fromDate").value;
-        filterData.toDate = document.getElementById("toDate").value;
+    if (dateFilter === "custom") {
+        filterData.fromDate = fromDate;
+        filterData.toDate = toDate;
     }
 
-    // Send to backend for PDF generation
     fetch("/generate-report/", {
         method: "POST",
         headers: {
             "Content-Type": "application/json",
-            "X-CSRFToken": "{{ csrf_token }}"
+            "X-CSRFToken": document.querySelector('[name=csrfmiddlewaretoken]').value
         },
         body: JSON.stringify(filterData)
     })
-    .then(response => response.blob())
+    .then(response => {
+        if (!response.ok) {
+            return response.text().then(text => { throw new Error(text); });
+        }
+        return response.blob();
+    })
     .then(blob => {
-        let url = window.URL.createObjectURL(blob);
-        let a = document.createElement("a");
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement("a");
         a.href = url;
         a.download = "expense_report.pdf";
         document.body.appendChild(a);
         a.click();
         a.remove();
+        window.URL.revokeObjectURL(url);
     })
-    .catch(error => console.error("Error generating report:", error));
+    .catch(error => {
+        alert(error.message || "Failed to generate report.");
+    });
 });
+
+
 
 
 document.addEventListener("DOMContentLoaded", function () {
