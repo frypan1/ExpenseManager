@@ -334,26 +334,47 @@ def generate_report(request):
         pie_chart.seek(0)
         
         # Enhanced Bar Chart with gradient colors and rounded edges
-        df_grouped = df.groupby("date").sum()
+        # Ensure 'date' column is datetime
+        df["date"] = pd.to_datetime(df["date"])
+
+        # Choose grouping logic based on date filter
+        if data["dateFilter"] == "yearly":
+            df["month"] = df["date"].dt.strftime('%B')
+            df["month_num"] = df["date"].dt.month
+            df_grouped = df.groupby(["month", "month_num"], as_index=False)["amount"].sum()
+            df_grouped = df_grouped.sort_values("month_num")
+            x_labels = df_grouped["month"]
+            y_values = df_grouped["amount"]
+        else:
+            df["date_str"] = df["date"].dt.strftime('%Y-%m-%d')
+            df_grouped = df.groupby("date_str", as_index=True)["amount"].sum()
+            x_labels = df_grouped.index
+            y_values = df_grouped.values
+
+        # Create bar chart
         plt.figure(figsize=(8, 4))
-        bars = plt.bar(df_grouped.index.astype(str), df_grouped["amount"], color=plt.cm.viridis(np.linspace(0.3, 0.8, len(df_grouped))), edgecolor="black")
-        plt.xlabel("Date", fontsize=12, fontweight='bold')
+        x_pos = np.arange(len(x_labels))
+        colors_list = plt.cm.viridis(np.linspace(0.3, 0.8, len(x_labels)))
+
+        bars = plt.bar(x_pos, y_values, color=colors_list, edgecolor="black")
+        plt.xticks(x_pos, x_labels, rotation=45, ha='right')
+
+        plt.xlabel("Month" if data["dateFilter"] == "yearly" else "Date", fontsize=12, fontweight='bold')
         plt.ylabel("Total Expenses", fontsize=12, fontweight='bold')
-        #plt.title("Expenses Over Time", fontsize=14, fontweight='bold')
         plt.grid(axis='y', linestyle='--', alpha=0.5)
-        
-        # Adjust x-axis date formatting
-        plt.xticks(rotation=45)
         plt.tight_layout()
-        
+
         for bar in bars:
             bar.set_linewidth(1.5)
             bar.set_edgecolor('black')
-        
+
+        # Save to buffer
         bar_chart = io.BytesIO()
         plt.savefig(bar_chart, format="png", bbox_inches='tight')
         plt.close()
         bar_chart.seek(0)
+
+
         
         # Generate PDF
         buffer = io.BytesIO()
@@ -402,7 +423,16 @@ def generate_report(request):
         elements.append(SpacerFlowable(20))
         
         # Transaction Table with alternating row colors
-        table_data = [["Date", "Product", "Amount"]] + df.values.tolist()
+        # Format 'date' column to remove timestamp
+        df['date'] = pd.to_datetime(df['date']).dt.strftime('%Y-%m-%d')
+
+        # Select only the required columns
+        table_data = [["Date", "Product", "Amount"]]  # Table headers
+        for _, row in df.iterrows():
+            table_data.append([row["date"], row["product_name"], f"{row['amount']:.2f}"])
+        
+
+        #table_data = [["Date", "Product", "Amount"]] + df.values.tolist()
         table = Table(table_data)
         table.setStyle(TableStyle([
             ("BACKGROUND", (1, 1), (-1, 0), colors.darkblue),
