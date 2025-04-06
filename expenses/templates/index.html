@@ -205,7 +205,7 @@
                     let div = document.createElement("div");
                     div.classList.add("form-check");
                     div.innerHTML = `
-                        <input type="checkbox" class="form-check-input category-option" value="${category}">
+                        <input type="checkbox" class="form-check-input category-option" value="${category}" checked>
                         <label class="form-check-label">${category}</label>
                     `;
                     categoryContainer.appendChild(div);
@@ -314,6 +314,40 @@ document.getElementById("downloadReport").addEventListener("click", function () 
         a.remove();
     })
     .catch(error => console.error("Error generating report:", error));
+});
+
+
+document.addEventListener("DOMContentLoaded", function () {
+    const reportModal = document.getElementById("reportModal");
+    const dateFilter = document.getElementById("dateFilter");
+    const yearInput = document.getElementById("yearInput");
+    const monthInput = document.getElementById("monthInput");
+    const fromDate = document.getElementById("fromDate");
+    const toDate = document.getElementById("toDate");
+
+    function updateDateInputs(selected) {
+        yearInput.style.display = (selected === "yearly" || selected === "monthly") ? "block" : "none";
+        monthInput.style.display = selected === "monthly" ? "block" : "none";
+        fromDate.style.display = toDate.style.display = selected === "custom" ? "block" : "none";
+    }
+
+    // Show the right inputs when modal opens
+    reportModal.addEventListener("show.bs.modal", function () {
+        updateDateInputs(dateFilter.value);
+        
+        // Check "All" checkbox
+        document.getElementById("allCategories").checked = true;
+
+        // Check all category checkboxes
+        setTimeout(() => {
+            document.querySelectorAll(".category-option").forEach(cb => cb.checked = true);
+        }, 100); // short delay ensures checkboxes exist before we manipulate
+    });
+
+    // Also update on change (you already have this, just clean and make sure it works)
+    dateFilter.addEventListener("change", function () {
+        updateDateInputs(this.value);
+    });
 });
 
 
