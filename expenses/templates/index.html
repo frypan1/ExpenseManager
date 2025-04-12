@@ -1,32 +1,57 @@
 {% extends 'base.html' %}
 
-{% block title %}Upload Invoice{% endblock %}
+{% block title %}Dashboard | Expensify AI{% endblock %}
 
 {% block content %}
-<h1>Expensify AI</h1>
-<div class="container">
-    <!-- Expenses by Category Section -->
-    <div class="chart-section">
-        <h2>Expenses by Category</h2>
+<h1 style="text-align: center;">Expensify AI Dashboard</h1>
 
-        <!-- If there are no expenses, show a message -->
-        {% if labels %}
-        <!-- Create a canvas element for the pie chart -->
-        <div class="chart-container">
-            <canvas id="expenseChart" class="small-chart"></canvas>
+<div class="container">
+
+    <!-- Filter Form -->
+    <form method="get" class="filter-form">
+        <label for="year">Year:</label>
+        <select name="year" id="year">
+            {% for y in available_years %}
+            <option value="{{ y.year }}" {% if y.year == selected_year %}selected{% endif %}>{{ y.year }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="month">Month:</label>
+        <select name="month" id="month">
+            <option value="">-- All Months --</option>
+            {% for num, name in available_months %}
+            <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Apply Filter</button>
+    </form>
+
+    <!-- Charts Section -->
+    <div class="charts-grid">
+        <!-- Pie Chart: Expenses by Category -->
+        <div class="chart-card">
+            <h2>Expenses by Category</h2>
+            <canvas id="categoryChart"></canvas>
         </div>
-        {% else %}
-        <p>No expenses recorded yet. Upload an invoice to get started!</p>
-        {% endif %}
+
+        <!-- Line Chart: Monthly Expenses -->
+        <div class="chart-card">
+            <h2>Monthly Expense Trend</h2>
+            <canvas id="monthlyChart"></canvas>
+        </div>
+
+        <!-- Bar Chart: Top Products -->
+        <div class="chart-card">
+            <h2>Top 5 Products</h2>
+            <canvas id="productChart"></canvas>
+        </div>
     </div>
 
-    <br><br>
-    <!-- Invoice Upload Section -->
+    <!-- Upload Section -->
     <div class="upload-section">
         <h2>Upload Invoice</h2>
-
-        <!-- The invoice upload form -->
-        <form method="POST" enctype="multipart/form-data" style="text-align: center;">
+        <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form.as_p }}
             <button type="submit">Upload</button>
@@ -34,91 +59,152 @@
     </div>
 </div>
 
-<!-- Add the style directly in the page or use an external file -->
-<style>
-    /* Styling for the Upload Section */
-    .upload-section {
-        background-color: #D7F9FD; /* Light green background */
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-    .upload-section button {
-        background-color: #418FAE;  /* Green button */
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-    .upload-section button:hover {
-        background-color: #367A92; /* Slightly darker green on hover */
-    }
-
-    /* Styling for the Chart Section */
-    .chart-section {
-        background-color: #D7F9FD; /* Light green background */
-        padding: 20px;
-        border-radius: 8px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Container for the chart */
-    .chart-container {
-        display: flex;
-        justify-content: center; /* Center-align the chart */
-        align-items: center;
-        height: 100%; /* Ensure full height available */
-    }
-
-    /* Chart Size Fix */
-    .small-chart {
-        width: 20vw;    /* 30% of the viewport width */
-        height: 20vw;   /* 30% of the viewport height */
-        max-width: 25vw;  /* Optional max size */
-        max-height: 25vw; /* Optional max size */
-    }
-</style>
-
-<!-- Include the Chart.js script -->
+<!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    // Get the labels and data passed from the view
-    var labels = {{ labels|safe }};
-    var data = {{ data|safe }};
-    
-    // Ensure that Chart.js is loaded before we use it
-    var ctx = document.getElementById('expenseChart').getContext('2d');
-    var expenseChart = new Chart(ctx, {
+    // Load data from context
+    const categoryLabels = {{ category_labels|safe }};
+    const categoryData = {{ category_data|safe }};
+
+    const monthlyLabels = {{ monthly_labels|safe }};
+    const monthlyData = {{ monthly_data|safe }};
+
+    const productLabels = {{ product_labels|safe }};
+    const productData = {{ product_data|safe }};
+
+    // Pie Chart
+    new Chart(document.getElementById('categoryChart'), {
         type: 'pie',
         data: {
-            labels: labels,  // Labels are the categories
+            labels: categoryLabels,
             datasets: [{
                 label: 'Expenses by Category',
-                data: data,      // Data is the total amount for each category
-                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A','#B39CD0','#FFCCBC','#C1C7CD','#FF8C42','#FFB677', '#FFE29A', '#A1D6E2', '#4A6FA5', '#6F9A8D', '#E3A587', '#CFD3CE'],  // Customize colors as needed
-                borderColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A','#B39CD0','#FFCCBC','#C1C7CD','#FF8C42','#FFB677', '#FFE29A', '#A1D6E2', '#4A6FA5', '#6F9A8D', '#E3A587', '#CFD3CE'],
+                data: categoryData,
+                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A', '#B39CD0'],
                 borderWidth: 1
             }]
         },
         options: {
-            responsive: true,
             plugins: {
-                legend: {
-                    position: 'top',
-                },
                 tooltip: {
                     callbacks: {
-                        label: function(tooltipItem) {
-                            return tooltipItem.label + ': ₹' + tooltipItem.raw.toFixed(2);  // Formatting tooltip
-                        }
+                        label: item => `${item.label}: ₹${item.raw.toFixed(2)}`
                     }
+                }
+            }
+        }
+    });
+
+    // Line Chart
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Monthly Expenses',
+                data: monthlyData,
+                backgroundColor: 'rgba(65,143,174,0.2)',
+                borderColor: '#418FAE',
+                fill: true,
+                tension: 0.3
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Bar Chart
+    new Chart(document.getElementById('productChart'), {
+        type: 'bar',
+        data: {
+            labels: productLabels,
+            datasets: [{
+                label: 'Top Spending Products',
+                data: productData,
+                backgroundColor: '#FF8C42'
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            scales: {
+                x: {
+                    beginAtZero: true
                 }
             }
         }
     });
 </script>
 
+<!-- Styles -->
+<style>
+    .filter-form {
+        text-align: center;
+        margin: 20px 0;
+    }
 
+    .filter-form label,
+    .filter-form select {
+        margin: 0 10px;
+        font-weight: bold;
+    }
+
+    .filter-form button {
+        background-color: #418FAE;
+        color: white;
+        padding: 5px 15px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+    }
+
+    .filter-form button:hover {
+        background-color: #367A92;
+    }
+
+    .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        gap: 20px;
+        margin-top: 30px;
+    }
+
+    .chart-card {
+        background-color: #D7F9FD;
+        padding: 20px;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        text-align: center;
+    }
+
+    .upload-section {
+        background-color: #D7F9FD;
+        margin-top: 40px;
+        padding: 20px;
+        border-radius: 12px;
+        text-align: center;
+    }
+
+    .upload-section button {
+        background-color: #418FAE;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+    }
+
+    .upload-section button:hover {
+        background-color: #367A92;
+    }
+
+    canvas {
+        max-width: 100%;
+    }
+</style>
 {% endblock %}

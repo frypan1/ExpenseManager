@@ -51,20 +51,64 @@ def logout_view(request):
 
 
 # Dashboard view (user-specific data)
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import render
+from django.db.models import Sum
+from django.db.models.functions import TruncMonth
+from .models import Expense, Category
+from .forms import InvoiceUploadForm
+from .utils import perform_ocr # Assuming you have these
+
+import json
+from collections import defaultdict
+from datetime import datetime
+from calendar import month_name
+from .forms import InvoiceUploadForm  # Assuming this exists
+
+
 @login_required
 def index(request):
-    # Fetch the total amount spent per category, filtering by the logged-in user
-    expenses_by_category = (
-        Expense.objects.filter(user=request.user)
-        .values('category__name')
-        .annotate(total_amount=Sum('amount'))
-        .order_by('category__name')
-    )
 
-    # Prepare the labels and data for the chart (category names and total amounts)
-    labels = [expense['category__name'] for expense in expenses_by_category]
-    data = [float(expense['total_amount']) for expense in expenses_by_category]
+    #askdbk
 
+    selected_year = request.GET.get('year')
+    selected_month = request.GET.get('month')
+
+    now = datetime.now()
+    year = int(selected_year) if selected_year else now.year
+    month = int(selected_month) if selected_month else None
+
+    expenses = Expense.objects.filter(user=request.user)
+    if month:
+        expenses = expenses.filter(date__year=year, date__month=month)
+    else:
+        expenses = expenses.filter(date__year=year)
+
+
+    expenses_by_category = expenses.values('category__name').annotate(total_amount=Sum('amount'))
+    category_labels = [e['category__name'] for e in expenses_by_category]
+    category_data = [float(e['total_amount']) for e in expenses_by_category]
+
+    # Line Chart: Monthly totals (only if no month selected)
+    monthly_totals = Expense.objects.filter(user=request.user, date__year=year) \
+                                    .values('date__month') \
+                                    .annotate(total=Sum('amount')) \
+                                    .order_by('date__month')
+    monthly_labels = [month_name[e['date__month']] for e in monthly_totals]
+    monthly_data = [float(e['total']) for e in monthly_totals]
+
+    # Bar Chart: Top 5 products
+    top_products = expenses.values('product_name').annotate(total=Sum('amount')).order_by('-total')[:5]
+    product_labels = [p['product_name'] for p in top_products]
+    product_data = [float(p['total']) for p in top_products]
+
+    available_years = Expense.objects.filter(user=request.user).dates('date', 'year')
+    available_months = list(enumerate(month_name))[1:]  # [(1, 'January'), ..., (12, 'December')]
+
+    extracted_entries = []
+    fixed_categories = []
+
+    form = InvoiceUploadForm()
     if request.method == 'POST':
         form = InvoiceUploadForm(request.POST, request.FILES)
         if form.is_valid():
@@ -74,13 +118,10 @@ def index(request):
                 for chunk in file.chunks():
                     f.write(chunk)
 
-            # Perform OCR on the uploaded image to extract text
             extracted_text = perform_ocr(file_path)
-            print(extracted_text)
             extracted_details_text = extract_invoice_details(extracted_text)
 
             if extracted_details_text:
-                extracted_entries = []
                 for line in extracted_details_text.splitlines():
                     if line.strip():
                         entry = {}
@@ -89,31 +130,123 @@ def index(request):
                             entry[key.strip().lower().replace(" ", "_")] = value.strip()
                         extracted_entries.append(entry)
 
-                # Fetch user-specific and global categories
                 user_categories = list(Category.objects.filter(user=request.user).values_list('name', flat=True))
                 global_categories = list(Category.objects.filter(user__isnull=True).values_list('name', flat=True))
                 fixed_categories = user_categories + global_categories
 
-                # Match extracted categories with existing categories
                 for entry in extracted_entries:
                     if 'category' in entry and entry['category'] not in fixed_categories:
-                        # If category is not in the list, assign 'Uncategorized' or flag it
                         entry['category'] = 'Uncategorized'
 
                 return render(request, 'review.html', {
                     'extracted_entries': extracted_entries,
                     'fixed_categories': fixed_categories,
                 })
-
-    else:
-        form = InvoiceUploadForm()
-
+            
     context = {
         'form': form,
-        'labels': labels,
-        'data': data,
+        'category_labels': json.dumps(category_labels),
+        'category_data': json.dumps(category_data),
+        'monthly_labels': json.dumps(monthly_labels),
+        'monthly_data': json.dumps(monthly_data),
+        'product_labels': json.dumps(product_labels),
+        'product_data': json.dumps(product_data),
+        'selected_year': year,
+        'selected_month': month,
+        'available_years': available_years,
+        'available_months': available_months,
     }
+            
+    #askdjn
+    # user = request.user
+
+    # # 1. Category-wise Expenses (Pie Chart)
+    # expenses_by_category = (
+    #     Expense.objects.filter(user=user)
+    #     .values('category__name')
+    #     .annotate(total_amount=Sum('amount'))
+    #     .order_by('category__name')
+    # )
+    # category_labels = [e['category__name'] for e in expenses_by_category]
+    # category_data = [float(e['total_amount']) for e in expenses_by_category]
+
+    # # 2. Monthly Expenses (Line Chart)
+    # expenses_by_month = (
+    #     Expense.objects.filter(user=user)
+    #     .annotate(month=TruncMonth('date'))
+    #     .values('month')
+    #     .annotate(total=Sum('amount'))
+    #     .order_by('month')
+    # )
+    # monthly_labels = [e['month'].strftime('%B %Y') for e in expenses_by_month]
+    # monthly_data = [float(e['total']) for e in expenses_by_month]
+
+    # # 3. Top Products (Bar Chart)
+    # top_products = (
+    #     Expense.objects.filter(user=user)
+    #     .values('product_name')
+    #     .annotate(total=Sum('amount'))
+    #     .order_by('-total')[:5]
+    # )
+    # product_labels = [e['product_name'] for e in top_products]
+    # product_data = [float(e['total']) for e in top_products]
+
+    # extracted_entries = []
+    # fixed_categories = []
+    # form = InvoiceUploadForm()
+
+    # # 4. Invoice Upload + OCR Handling
+    # if request.method == 'POST':
+    #     form = InvoiceUploadForm(request.POST, request.FILES)
+    #     if form.is_valid():
+    #         file = form.cleaned_data['image']
+    #         file_path = f'media/uploads/{file.name}'
+    #         with open(file_path, 'wb') as f:
+    #             for chunk in file.chunks():
+    #                 f.write(chunk)
+
+    #         extracted_text = perform_ocr(file_path)
+    #         extracted_details_text = extract_invoice_details(extracted_text)
+
+    #         if extracted_details_text:
+    #             for line in extracted_details_text.splitlines():
+    #                 if line.strip():
+    #                     entry = {}
+    #                     for item in line.split(", "):
+    #                         key, value = item.split(": ")
+    #                         entry[key.strip().lower().replace(" ", "_")] = value.strip()
+    #                     extracted_entries.append(entry)
+
+    #             user_categories = list(Category.objects.filter(user=user).values_list('name', flat=True))
+    #             global_categories = list(Category.objects.filter(user__isnull=True).values_list('name', flat=True))
+    #             fixed_categories = user_categories + global_categories
+
+    #             for entry in extracted_entries:
+    #                 if 'category' in entry and entry['category'] not in fixed_categories:
+    #                     entry['category'] = 'Uncategorized'
+
+    #             return render(request, 'review.html', {
+    #                 'extracted_entries': extracted_entries,
+    #                 'fixed_categories': fixed_categories,
+    #             })
+
+    # available_years = Expense.objects.filter(user=request.user).dates('date', 'year')
+    # available_months = list(enumerate(month_name))[1:]  # skip empty index
+
+
+    # # 5. Final Context
+    # context = {
+    #     'form': form,
+    #     'category_labels': json.dumps(category_labels),
+    #     'category_data': json.dumps(category_data),
+    #     'monthly_labels': json.dumps(monthly_labels),
+    #     'monthly_data': json.dumps(monthly_data),
+    #     'product_labels': json.dumps(product_labels),
+    #     'product_data': json.dumps(product_data),
+    # }
+
     return render(request, 'index.html', context)
+
 
 
 # Extract invoice details using OpenAI API
