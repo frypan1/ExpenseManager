@@ -33,16 +33,17 @@
             <h2>Expenses by Category</h2>
             <canvas id="categoryChart"></canvas>
         </div>
+        <div class="chart-card">
+            <h2>Top 5 Products</h2>
+            <br>
+            <canvas id="productChart"></canvas>
+        </div>
 
         <div class="chart-card">
             <h2>Monthly Expense Trend</h2>
             <canvas id="monthlyChart"></canvas>
         </div>
 
-        <div class="chart-card">
-            <h2>Top 5 Products</h2>
-            <canvas id="productChart"></canvas>
-        </div>
     </div>
 
     <!-- Upload Section -->
@@ -159,15 +160,35 @@
         data: {
             labels: productLabels,
             datasets: [{
-                label: 'Top Products',
+                label: 'Expenses',
                 data: productData,
-                backgroundColor: '#FF8C42'
+                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A']
             }]
         },
         options: {
-            indexAxis: 'y'
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false
+                }
+            }
         }
     });
+    
 
     // Modal logic
     function openReportModal() {
