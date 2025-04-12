@@ -29,19 +29,16 @@
 
     <!-- Charts Section -->
     <div class="charts-grid">
-        <!-- Pie Chart: Expenses by Category -->
         <div class="chart-card">
             <h2>Expenses by Category</h2>
             <canvas id="categoryChart"></canvas>
         </div>
 
-        <!-- Line Chart: Monthly Expenses -->
         <div class="chart-card">
             <h2>Monthly Expense Trend</h2>
             <canvas id="monthlyChart"></canvas>
         </div>
 
-        <!-- Bar Chart: Top Products -->
         <div class="chart-card">
             <h2>Top 5 Products</h2>
             <canvas id="productChart"></canvas>
@@ -57,91 +54,170 @@
             <button type="submit">Upload</button>
         </form>
     </div>
+
+    <!-- Generate Report Button -->
+    <div style="text-align: center; margin-top: 30px;">
+        <button onclick="openReportModal()">Generate Report</button>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeReportModal()">&times;</span>
+            <h2>Select Report Type</h2>
+            <form id="reportSelectionForm">
+                <label><input type="radio" name="report_type" value="yearly" checked> Yearly Report</label><br>
+                <label><input type="radio" name="report_type" value="monthly"> Monthly Report</label><br>
+                <label><input type="radio" name="report_type" value="range"> Date Range Report</label><br><br>
+
+                <div id="yearSelection">
+                    <label for="reportYear">Year:</label>
+                    <select id="reportYear">
+                        {% for y in available_years %}
+                        <option value="{{ y.year }}">{{ y.year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="monthSelection" style="display: none;">
+                    <label for="reportMonth">Month:</label>
+                    <select id="reportMonth">
+                        {% for num, name in available_months %}
+                        <option value="{{ num }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="rangeSelection" style="display: none;">
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDate"><br>
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDate">
+                </div><br>
+
+                <button type="button" onclick="submitReport()">Generate PDF</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden PDF Report Form -->
+    <form method="POST" action="{% url 'generate_report' %}" id="reportForm">
+        {% csrf_token %}
+        <input type="hidden" name="report_type" id="report_type">
+        <input type="hidden" name="year" id="report_year">
+        <input type="hidden" name="month" id="report_month">
+        <input type="hidden" name="start_date" id="report_start_date">
+        <input type="hidden" name="end_date" id="report_end_date">
+
+        <input type="hidden" name="category_chart_image" id="category_chart_image">
+        <input type="hidden" name="monthly_chart_image" id="monthly_chart_image">
+        <input type="hidden" name="product_chart_image" id="product_chart_image">
+    </form>
+
 </div>
 
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-    // Load data from context
+    // Load chart data from context
     const categoryLabels = {{ category_labels|safe }};
     const categoryData = {{ category_data|safe }};
-
     const monthlyLabels = {{ monthly_labels|safe }};
     const monthlyData = {{ monthly_data|safe }};
-
     const productLabels = {{ product_labels|safe }};
     const productData = {{ product_data|safe }};
 
-    // Pie Chart
-    new Chart(document.getElementById('categoryChart'), {
+    const categoryChart = new Chart(document.getElementById('categoryChart'), {
         type: 'pie',
         data: {
             labels: categoryLabels,
             datasets: [{
-                label: 'Expenses by Category',
                 data: categoryData,
-                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A', '#B39CD0'],
-                borderWidth: 1
+                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A', '#B39CD0']
             }]
-        },
-        options: {
-            plugins: {
-                tooltip: {
-                    callbacks: {
-                        label: item => `${item.label}: ₹${item.raw.toFixed(2)}`
-                    }
-                }
-            }
         }
     });
 
-    // Line Chart
-    new Chart(document.getElementById('monthlyChart'), {
+    const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
         type: 'line',
         data: {
             labels: monthlyLabels,
             datasets: [{
                 label: 'Monthly Expenses',
                 data: monthlyData,
-                backgroundColor: 'rgba(65,143,174,0.2)',
                 borderColor: '#418FAE',
+                backgroundColor: 'rgba(65,143,174,0.2)',
                 fill: true,
                 tension: 0.3
             }]
-        },
-        options: {
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
         }
     });
 
-    // Bar Chart
-    new Chart(document.getElementById('productChart'), {
+    const productChart = new Chart(document.getElementById('productChart'), {
         type: 'bar',
         data: {
             labels: productLabels,
             datasets: [{
-                label: 'Top Spending Products',
+                label: 'Top Products',
                 data: productData,
                 backgroundColor: '#FF8C42'
             }]
         },
         options: {
-            indexAxis: 'y',
-            scales: {
-                x: {
-                    beginAtZero: true
-                }
-            }
+            indexAxis: 'y'
         }
     });
+
+    // Modal logic
+    function openReportModal() {
+        document.getElementById('reportModal').style.display = 'block';
+    }
+
+    function closeReportModal() {
+        document.getElementById('reportModal').style.display = 'none';
+    }
+
+    document.querySelectorAll('input[name="report_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const type = this.value;
+    
+            // Year is shown for both yearly and monthly
+            document.getElementById('yearSelection').style.display = (type === 'yearly' || type === 'monthly') ? 'block' : 'none';
+    
+            // Month only shown for monthly
+            document.getElementById('monthSelection').style.display = (type === 'monthly') ? 'block' : 'none';
+    
+            // Date range only shown for range
+            document.getElementById('rangeSelection').style.display = (type === 'range') ? 'block' : 'none';
+        });
+    });
+    
+
+    function submitReport() {
+        const type = document.querySelector('input[name="report_type"]:checked').value;
+
+        document.getElementById('report_type').value = type;
+
+        if (type === 'yearly') {
+            document.getElementById('report_year').value = document.getElementById('reportYear').value;
+        } else if (type === 'monthly') {
+            document.getElementById('report_year').value = document.getElementById('reportYear').value;
+            document.getElementById('report_month').value = document.getElementById('reportMonth').value;
+        } else if (type === 'range') {
+            document.getElementById('report_start_date').value = document.getElementById('startDate').value;
+            document.getElementById('report_end_date').value = document.getElementById('endDate').value;
+        }
+
+        // Capture charts
+        document.getElementById("category_chart_image").value = document.getElementById("categoryChart").toDataURL();
+        document.getElementById("monthly_chart_image").value = document.getElementById("monthlyChart").toDataURL();
+        document.getElementById("product_chart_image").value = document.getElementById("productChart").toDataURL();
+
+        document.getElementById("reportForm").submit();
+    }
 </script>
 
-<!-- Styles -->
 <style>
     .filter-form {
         text-align: center;
@@ -161,10 +237,6 @@
         border-radius: 6px;
         border: none;
         cursor: pointer;
-    }
-
-    .filter-form button:hover {
-        background-color: #367A92;
     }
 
     .charts-grid {
@@ -190,7 +262,9 @@
         text-align: center;
     }
 
-    .upload-section button {
+    .upload-section button,
+    .modal-content button,
+    button[onclick="openReportModal()"] {
         background-color: #418FAE;
         color: white;
         padding: 10px 20px;
@@ -199,12 +273,38 @@
         cursor: pointer;
     }
 
-    .upload-section button:hover {
-        background-color: #367A92;
-    }
-
     canvas {
         max-width: 100%;
+    }
+
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 10;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-content {
+        background-color: #fff;
+        margin: 10% auto;
+        padding: 30px;
+        border-radius: 8px;
+        width: 90%;
+        max-width: 400px;
+        text-align: center;
+    }
+
+    .close {
+        position: absolute;
+        right: 20px;
+        top: 15px;
+        font-size: 24px;
+        cursor: pointer;
     }
 </style>
 {% endblock %}

@@ -1,0 +1,155 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Expense Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #ffffff;
+            font-size: 14px;
+        }
+
+        h1, h2 {
+            text-align: center;
+            color: #418FAE;
+        }
+
+        .info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .chart-section {
+            text-align: center;
+            margin: 30px 0;
+        }
+
+        .chart-section img {
+            width: 400px;
+            height: auto;
+            margin: 10px auto;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 13px;
+        }
+
+        th, td {
+            border: 1px solid #99c5e0;
+            padding: 10px;
+            text-align: left;
+            word-wrap: break-word;
+            white-space: normal;
+        }
+
+        th {
+            background-color: #418FAE;
+            color: white;
+            text-align: center;
+        }
+
+        td {
+            background-color: #f0fbff;
+        }
+
+        td, th {
+            max-width: 200px;  /* Ensure that the columns have a maximum width */
+        }
+
+        th.category, td.category {
+            width: 30%;
+        }
+
+        th.amount, td.amount {
+            width: 20%;
+        }
+
+        th.product, td.product {
+            width: 30%;
+        }
+
+        th.date, td.date {
+            width: 20%;
+        }
+
+        .total {
+            text-align: right;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>Expense Report</h1>
+
+    <div class="info">
+        <p>Report Type: {{ report_type|title }}</p>
+        {% if selected_year %}
+            <p>Year: {{ selected_year }}</p>
+        {% endif %}
+        {% if selected_month %}
+            <p>Month: {{ selected_month }}</p>
+        {% endif %}
+        {% if start_date and end_date %}
+            <p>Date Range: {{ start_date }} to {{ end_date }}</p>
+        {% endif %}
+    </div>
+
+    <div class="chart-section">
+        {% if category_chart %}
+            <h2>Expenses by Category</h2>
+            <img src="{{ category_chart }}" alt="Category Chart">
+        {% endif %}
+
+        {% if monthly_chart %}
+            <h2>Monthly Expense Trend</h2>
+            <img src="{{ monthly_chart }}" alt="Monthly Chart">
+        {% endif %}
+
+        {% if product_chart %}
+            <h2>Top Products</h2>
+            <img src="{{ product_chart }}" alt="Product Chart">
+        {% endif %}
+    </div>
+
+    <h2>Expense Entries</h2>
+    <table>
+        <thead>
+            <tr>
+                <th class="date">Date</th>
+                <th class="category">Category</th>
+                <th class="product">Product</th>
+                <th class="amount">Amount (₹)</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for expense in expenses %}
+                <tr>
+                    <td class="date">{{ expense.date }}</td>
+                    <td class="category">{{ expense.category }}</td>
+                    <td class="product">{{ expense.product_name }}</td>
+                    <td class="amount">{{ expense.amount }}</td>
+                </tr>
+            {% empty %}
+                <tr>
+                    <td colspan="4">No expenses found for this report.</td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <p class="total">Total Expenses: ₹ {{ total }}</p>
+
+</body>
+</html>

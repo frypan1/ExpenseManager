@@ -7,3 +7,6 @@ opencv-python
 pandas
 matplotlib
 reportlab
+weasyprint
+pango
+xhtml2pdf

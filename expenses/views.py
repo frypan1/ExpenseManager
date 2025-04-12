@@ -369,3 +369,192 @@ def delete_expense(request, expense_id):
     return render(request, 'confirm_delete.html', {'expense': expense})
 
 #hello
+
+# from django.shortcuts import render
+# from django.http import HttpResponse
+# from django.template.loader import render_to_string
+# from weasyprint import HTML
+# from datetime import datetime
+# from .models import Expense
+
+# # Function to fetch expenses for a specific year
+# def fetch_yearly_expenses(year):
+#     return Expense.objects.filter(date__year=year)
+
+# # Function to fetch expenses for a specific month of a specific year
+# def fetch_monthly_expenses(year, month):
+#     return Expense.objects.filter(date__year=year, date__month=month)
+
+# # Function to fetch expenses within a specific date range
+# def fetch_expenses_by_date_range(start_date, end_date):
+#     start_date = datetime.strptime(start_date, "%Y-%m-%d")
+#     end_date = datetime.strptime(end_date, "%Y-%m-%d")
+#     return Expense.objects.filter(date__range=[start_date, end_date])
+
+# # Handle report generation
+# def generate_report(request):
+#     if request.method == 'POST':
+#         report_type = request.POST.get('report_type')
+#         year = request.POST.get('year')
+#         month = request.POST.get('month')
+#         start_date = request.POST.get('start_date')
+#         end_date = request.POST.get('end_date')
+
+#         # Fetch expenses data based on report type
+#         if report_type == 'yearly' and year:
+#             expenses = fetch_yearly_expenses(year)
+#         elif report_type == 'monthly' and year and month:
+#             expenses = fetch_monthly_expenses(year, month)
+#         elif report_type == 'daterange' and start_date and end_date:
+#             expenses = fetch_expenses_by_date_range(start_date, end_date)
+#         else:
+#             return HttpResponse("Invalid data received", status=400)
+
+#         # Prepare context for PDF rendering
+#         context = {
+#             'expenses': expenses,
+#             'selected_year': year,
+#             'selected_month': month,
+#             'start_date': start_date,
+#             'end_date': end_date,
+#             'report_type': report_type
+#         }
+
+#         # Render PDF using WeasyPrint
+#         html = render_to_string('report_template.html', context)
+#         pdf = HTML(string=html).write_pdf()
+
+#         # Return PDF as a response
+#         response = HttpResponse(pdf, content_type='application/pdf')
+#         response['Content-Disposition'] = f'attachment; filename="report_{year}_{month if month else ""}_{start_date}_{end_date}.pdf"'
+#         return response
+
+#     return HttpResponse(status=405)  # Method not allowed if it's not a POST request
+# import base64
+# from django.template.loader import render_to_string
+# from django.http import HttpResponse
+# from xhtml2pdf import pisa
+# from io import BytesIO
+# from .models import Expense
+
+
+# def generate_report(request):
+#     if request.method == 'POST':
+#         report_type = request.POST.get('report_type')
+#         year = request.POST.get('year')
+#         month = request.POST.get('month')
+#         start_date = request.POST.get('start_date')
+#         end_date = request.POST.get('end_date')
+
+#         # base64 chart images (URLs like "data:image/png;base64,...")
+#         chart_category = request.POST.get('category_chart_image')
+#         chart_monthly = request.POST.get('monthly_chart_image')
+#         chart_product = request.POST.get('product_chart_image')
+
+#         expenses = []
+#         subtitle = ""
+
+#         if report_type == 'yearly' and year:
+#             expenses = Expense.objects.filter(date__year=year)
+#             subtitle = f"Year: {year}"
+
+#         elif report_type == 'monthly' and year and month:
+#             expenses = Expense.objects.filter(date__year=year, date__month=month)
+#             subtitle = f"Month: {month}/{year}"
+
+#         elif report_type == 'range' and start_date and end_date:
+#             expenses = Expense.objects.filter(date__range=[start_date, end_date])
+#             subtitle = f"From {start_date} to {end_date}"
+
+#         total_amount = sum(e.amount for e in expenses)
+
+#         # Render HTML with charts and expense data
+#         html = render_to_string("report_template.html", {
+#             "report_type": report_type,
+#             "selected_year": year,
+#             "selected_month": month,
+#             "start_date": start_date,
+#             "end_date": end_date,
+#             "expenses": expenses,
+#             "total": total_amount,
+#             "chart_category": chart_category,
+#             "chart_monthly": chart_monthly,
+#             "chart_product": chart_product,
+#         })
+
+#         # Prepare PDF response
+#         response = HttpResponse(content_type='application/pdf')
+#         response['Content-Disposition'] = f'attachment; filename="expense_report.pdf"'
+
+#         pdf_file = BytesIO()
+#         pisa_status = pisa.CreatePDF(src=html, dest=pdf_file, encoding='UTF-8')
+
+#         if pisa_status.err:
+#             return HttpResponse("Error generating PDF", status=500)
+
+#         # Send PDF
+#         response.write(pdf_file.getvalue())
+#         return response
+
+#     return HttpResponse("Invalid request", status=400)
+import base64
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from xhtml2pdf import pisa
+from io import BytesIO
+from .models import Expense
+
+
+def generate_report(request):
+    if request.method == 'POST':
+        report_type = request.POST.get('report_type')
+        year = request.POST.get('year')
+        month = request.POST.get('month')
+        start_date = request.POST.get('start_date')
+        end_date = request.POST.get('end_date')
+        category_chart = request.POST.get('category_chart_image')  # base64
+        monthly_chart = request.POST.get('monthly_chart_image')
+        product_chart = request.POST.get('product_chart_image')
+
+        expenses = []
+        title = "Expense Report"
+        subtitle = ""
+
+        if report_type == 'yearly' and year:
+            expenses = Expense.objects.filter(date__year=year)
+            subtitle = f"Year: {year}"
+
+        elif report_type == 'monthly' and year and month:
+            expenses = Expense.objects.filter(date__year=year, date__month=month)
+            subtitle = f"Month: {month}/{year}"
+
+        elif report_type == 'range' and start_date and end_date:
+            expenses = Expense.objects.filter(date__range=[start_date, end_date])
+            subtitle = f"From {start_date} to {end_date}"
+
+        total_amount = sum(e.amount for e in expenses)
+
+        # Product data for the chart (Top 5 products)
+        top_products = Expense.objects.values('product_name').annotate(total_spent=Sum('amount')).order_by('-total_spent')[:5]
+        product_labels = [product['product_name'] for product in top_products]
+        product_data = [product['total_spent'] for product in top_products]
+
+        # Render PDF HTML
+        html = render_to_string("report_template.html", {
+            "expenses": expenses,
+            "total": total_amount,
+            "title": title,
+            "subtitle": subtitle,
+            "category_chart": category_chart,
+            "monthly_chart": monthly_chart,
+            "product_chart": product_chart,
+            "product_labels": product_labels,
+            "product_data": product_data,
+        })
+
+        # Generate PDF
+        response = HttpResponse(content_type='application/pdf')
+        response['Content-Disposition'] = f'attachment; filename="{title.replace(" ", "_")}.pdf"'
+
+        pisa.CreatePDF(BytesIO(html.encode("UTF-8")), dest=response, encoding='UTF-8')
+        return response
