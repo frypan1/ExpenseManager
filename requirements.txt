@@ -10,3 +10,4 @@ reportlab
 weasyprint
 pango
 xhtml2pdf
+prophet

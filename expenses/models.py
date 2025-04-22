@@ -35,3 +35,22 @@ def create_default_categories(sender, instance, created, **kwargs):
         default_categories = ['Food', 'Transport', 'Utilities', 'Entertainment']
         for category_name in default_categories:
             Category.objects.create(name=category_name, user=instance)  # Create categories for the new user
+
+
+# Forecasting model to predict future expenses
+
+class Forecast(models.Model):
+    TIMEFRAME_CHOICES = [
+        ('weekly', 'Weekly'),
+        ('monthly', 'Monthly'),
+        ('yearly', 'Yearly'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    category = models.ForeignKey(Category, on_delete=models.CASCADE)
+    predicted_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    prediction_date = models.DateField()
+    timeframe = models.CharField(max_length=10, choices=TIMEFRAME_CHOICES)
+
+    def __str__(self):
+        return f"{self.user.username} - {self.category.name} - {self.timeframe} - {self.prediction_date}"

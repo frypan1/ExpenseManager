@@ -141,3 +141,9 @@ if env_path.exists():
     load_dotenv(env_path)
 
 OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
+
+# settings.py
+
+SESSION_ENGINE = 'django.contrib.sessions.backends.db'  # Using the database for sessions
+SESSION_COOKIE_NAME = 'my_unique_session_cookie_name'  # Custom session cookie name
+SESSION_EXPIRE_AT_BROWSER_CLOSE = True  # Optional: Expire session when browser is closed

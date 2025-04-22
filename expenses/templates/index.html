@@ -3,242 +3,6 @@
 {% block title %}Dashboard | Expensify AI{% endblock %}
 
 {% block content %}
-<h1 style="text-align: center;">Expensify AI Dashboard</h1>
-
-<div class="container">
-
-    <!-- Filter Form -->
-    <form method="get" class="filter-form">
-        <label for="year">Year:</label>
-        <select name="year" id="year">
-            {% for y in available_years %}
-            <option value="{{ y.year }}" {% if y.year == selected_year %}selected{% endif %}>{{ y.year }}</option>
-            {% endfor %}
-        </select>
-
-        <label for="month">Month:</label>
-        <select name="month" id="month">
-            <option value="">-- All Months --</option>
-            {% for num, name in available_months %}
-            <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
-            {% endfor %}
-        </select>
-
-        <button type="submit">Apply Filter</button>
-    </form>
-
-    <!-- Charts Section -->
-    <div class="charts-grid">
-        <div class="chart-card">
-            <h2>Expenses by Category</h2>
-            <canvas id="categoryChart"></canvas>
-        </div>
-        <div class="chart-card">
-            <h2>Top 5 Products</h2>
-            <br>
-            <canvas id="productChart"></canvas>
-        </div>
-
-        <div class="chart-card">
-            <h2>Monthly Expense Trend</h2>
-            <canvas id="monthlyChart"></canvas>
-        </div>
-
-    </div>
-
-    <!-- Upload Section -->
-    <div class="upload-section">
-        <h2>Upload Invoice</h2>
-        <form method="POST" enctype="multipart/form-data">
-            {% csrf_token %}
-            {{ form.as_p }}
-            <button type="submit">Upload</button>
-        </form>
-    </div>
-
-    <!-- Generate Report Button -->
-    <div style="text-align: center; margin-top: 30px;">
-        <button onclick="openReportModal()">Generate Report</button>
-    </div>
-
-    <!-- Report Modal -->
-    <div id="reportModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeReportModal()">&times;</span>
-            <h2>Select Report Type</h2>
-            <form id="reportSelectionForm">
-                <label><input type="radio" name="report_type" value="yearly" checked> Yearly Report</label><br>
-                <label><input type="radio" name="report_type" value="monthly"> Monthly Report</label><br>
-                <label><input type="radio" name="report_type" value="range"> Date Range Report</label><br><br>
-
-                <div id="yearSelection">
-                    <label for="reportYear">Year:</label>
-                    <select id="reportYear">
-                        {% for y in available_years %}
-                        <option value="{{ y.year }}">{{ y.year }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div id="monthSelection" style="display: none;">
-                    <label for="reportMonth">Month:</label>
-                    <select id="reportMonth">
-                        {% for num, name in available_months %}
-                        <option value="{{ num }}">{{ name }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <div id="rangeSelection" style="display: none;">
-                    <label for="startDate">Start Date:</label>
-                    <input type="date" id="startDate"><br>
-                    <label for="endDate">End Date:</label>
-                    <input type="date" id="endDate">
-                </div><br>
-
-                <button type="button" onclick="submitReport()">Generate PDF</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Hidden PDF Report Form -->
-    <form method="POST" action="{% url 'generate_report' %}" id="reportForm">
-        {% csrf_token %}
-        <input type="hidden" name="report_type" id="report_type">
-        <input type="hidden" name="year" id="report_year">
-        <input type="hidden" name="month" id="report_month">
-        <input type="hidden" name="start_date" id="report_start_date">
-        <input type="hidden" name="end_date" id="report_end_date">
-
-        <input type="hidden" name="category_chart_image" id="category_chart_image">
-        <input type="hidden" name="monthly_chart_image" id="monthly_chart_image">
-        <input type="hidden" name="product_chart_image" id="product_chart_image">
-    </form>
-
-</div>
-
-<!-- Chart.js -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<script>
-    // Load chart data from context
-    const categoryLabels = {{ category_labels|safe }};
-    const categoryData = {{ category_data|safe }};
-    const monthlyLabels = {{ monthly_labels|safe }};
-    const monthlyData = {{ monthly_data|safe }};
-    const productLabels = {{ product_labels|safe }};
-    const productData = {{ product_data|safe }};
-
-    const categoryChart = new Chart(document.getElementById('categoryChart'), {
-        type: 'pie',
-        data: {
-            labels: categoryLabels,
-            datasets: [{
-                data: categoryData,
-                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A', '#B39CD0']
-            }]
-        }
-    });
-
-    const monthlyChart = new Chart(document.getElementById('monthlyChart'), {
-        type: 'line',
-        data: {
-            labels: monthlyLabels,
-            datasets: [{
-                label: 'Monthly Expenses',
-                data: monthlyData,
-                borderColor: '#418FAE',
-                backgroundColor: 'rgba(65,143,174,0.2)',
-                fill: true,
-                tension: 0.3
-            }]
-        }
-    });
-
-    const productChart = new Chart(document.getElementById('productChart'), {
-        type: 'bar',
-        data: {
-            labels: productLabels,
-            datasets: [{
-                label: 'Expenses',
-                data: productData,
-                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A']
-            }]
-        },
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        callback: function(value) {
-                            return '$' + value;
-                        }
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: false
-                }
-            }
-        }
-    });
-    
-
-    // Modal logic
-    function openReportModal() {
-        document.getElementById('reportModal').style.display = 'block';
-    }
-
-    function closeReportModal() {
-        document.getElementById('reportModal').style.display = 'none';
-    }
-
-    document.querySelectorAll('input[name="report_type"]').forEach(radio => {
-        radio.addEventListener('change', function () {
-            const type = this.value;
-    
-            // Year is shown for both yearly and monthly
-            document.getElementById('yearSelection').style.display = (type === 'yearly' || type === 'monthly') ? 'block' : 'none';
-    
-            // Month only shown for monthly
-            document.getElementById('monthSelection').style.display = (type === 'monthly') ? 'block' : 'none';
-    
-            // Date range only shown for range
-            document.getElementById('rangeSelection').style.display = (type === 'range') ? 'block' : 'none';
-        });
-    });
-    
-
-    function submitReport() {
-        const type = document.querySelector('input[name="report_type"]:checked').value;
-
-        document.getElementById('report_type').value = type;
-
-        if (type === 'yearly') {
-            document.getElementById('report_year').value = document.getElementById('reportYear').value;
-        } else if (type === 'monthly') {
-            document.getElementById('report_year').value = document.getElementById('reportYear').value;
-            document.getElementById('report_month').value = document.getElementById('reportMonth').value;
-        } else if (type === 'range') {
-            document.getElementById('report_start_date').value = document.getElementById('startDate').value;
-            document.getElementById('report_end_date').value = document.getElementById('endDate').value;
-        }
-
-        // Capture charts
-        document.getElementById("category_chart_image").value = document.getElementById("categoryChart").toDataURL();
-        document.getElementById("monthly_chart_image").value = document.getElementById("monthlyChart").toDataURL();
-        document.getElementById("product_chart_image").value = document.getElementById("productChart").toDataURL();
-
-        document.getElementById("reportForm").submit();
-    }
-</script>
-
 <style>
     .filter-form {
         text-align: center;
@@ -318,6 +82,7 @@
         width: 90%;
         max-width: 400px;
         text-align: center;
+        position: relative;
     }
 
     .close {
@@ -328,4 +93,323 @@
         cursor: pointer;
     }
 </style>
+
+<h1 style="text-align: center;">Expensify AI Dashboard</h1>
+
+<div class="container">
+    <h2 style="text-align: center;">Welcome, {{ user.username }}!</h2>
+
+    <!-- Filter Form -->
+    <form method="get" class="filter-form">
+        <label for="year">Year:</label>
+        <select name="year" id="year">
+            {% for y in available_years %}
+            <option value="{{ y.year }}" {% if y.year == selected_year %}selected{% endif %}>{{ y.year }}</option>
+            {% endfor %}
+        </select>
+
+        <label for="month">Month:</label>
+        <select name="month" id="month">
+            <option value="">-- All Months --</option>
+            {% for num, name in available_months %}
+            <option value="{{ num }}" {% if num == selected_month %}selected{% endif %}>{{ name }}</option>
+            {% endfor %}
+        </select>
+
+        <button type="submit">Apply Filter</button>
+    </form>
+
+    <!-- Charts Section with Grid -->
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h2>Expenses by Category</h2>
+            <canvas id="categoryChart"></canvas>
+        </div>
+
+        <div class="chart-card">
+            <h2>Monthly Expense Trend</h2>
+            <canvas id="monthlyChart"></canvas>
+        </div>
+    </div>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h2>Top 5 Products</h2>
+            <canvas id="productChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Upload Section -->
+    <div class="upload-section">
+        <h2>Upload Invoice</h2>
+        <form method="POST" enctype="multipart/form-data">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit">Upload</button>
+        </form>
+    </div>
+
+    <!-- Predictions -->
+    <h2 style="text-align: center; margin-top: 40px;">Predictions!</h2>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h2>Weekly Forecast</h2>
+            <canvas id="weeklyPredictionChart"></canvas>
+        </div>
+    </div>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h2>Monthly Forecast</h2>
+            <canvas id="monthlyPredictionChart"></canvas>
+        </div>
+    </div>
+    <div class="charts-grid">
+        <div class="chart-card">
+            <h2>Yearly Forecast</h2>
+            <canvas id="yearlyPredictionChart"></canvas>
+        </div>
+    </div>
+
+    <!-- Report Modal Trigger -->
+    <div style="text-align: center; margin-top: 30px;">
+        <button onclick="openReportModal()">Generate Report</button>
+    </div>
+
+    <!-- Report Modal -->
+    <div id="reportModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeReportModal()">&times;</span>
+            <h2>Select Report Type</h2>
+            <form id="reportSelectionForm">
+                <label><input type="radio" name="report_type" value="yearly" checked> Yearly Report</label><br>
+                <label><input type="radio" name="report_type" value="monthly"> Monthly Report</label><br>
+                <label><input type="radio" name="report_type" value="range"> Date Range Report</label><br><br>
+
+                <div id="yearSelection">
+                    <label for="reportYear">Year:</label>
+                    <select id="reportYear">
+                        {% for y in available_years %}
+                        <option value="{{ y.year }}">{{ y.year }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="monthSelection" style="display: none;">
+                    <label for="reportMonth">Month:</label>
+                    <select id="reportMonth">
+                        {% for num, name in available_months %}
+                        <option value="{{ num }}">{{ name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div id="rangeSelection" style="display: none;">
+                    <label for="startDate">Start Date:</label>
+                    <input type="date" id="startDate"><br>
+                    <label for="endDate">End Date:</label>
+                    <input type="date" id="endDate">
+                </div><br>
+
+                <button type="button" onclick="submitReport()">Generate PDF</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden Report Form -->
+    <form method="POST" action="{% url 'generate_report' %}" id="reportForm">
+        {% csrf_token %}
+        <input type="hidden" name="report_type" id="report_type">
+        <input type="hidden" name="year" id="report_year">
+        <input type="hidden" name="month" id="report_month">
+        <input type="hidden" name="start_date" id="report_start_date">
+        <input type="hidden" name="end_date" id="report_end_date">
+        <input type="hidden" name="category_chart_image" id="category_chart_image">
+        <input type="hidden" name="monthly_chart_image" id="monthly_chart_image">
+        <input type="hidden" name="product_chart_image" id="product_chart_image">
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<!-- Chart.js and Modal Logic (unchanged) -->
+<script>
+    // Load chart data from context
+    const categoryLabels = {{ category_labels|safe }};
+    const categoryData = {{ category_data|safe }};
+    const monthlyLabels = {{ monthly_labels|safe }};
+    const monthlyData = {{ monthly_data|safe }};
+    const productLabels = {{ product_labels|safe }};
+    const productData = {{ product_data|safe }};
+
+    const weekly_forecasted_data = JSON.parse('{{ weekly_forecasted_data | escapejs }}');
+    const monthly_forecasted_data = JSON.parse('{{ monthly_forecasted_data | escapejs }}');
+    const yearly_forecasted_data = JSON.parse('{{ yearly_forecasted_data | escapejs }}');
+
+    // Weekly Forecast Chart
+    new Chart(document.getElementById('weeklyPredictionChart'), {
+        type: 'bar',
+        data: {
+            labels: weekly_forecasted_data.map(data => data.category),
+            datasets: [{
+                label: 'Predicted Amount',
+                data: weekly_forecasted_data.map(data => data.predicted_amount),
+                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Monthly Forecast Chart
+    new Chart(document.getElementById('monthlyPredictionChart'), {
+        type: 'bar',
+        data: {
+            labels: monthly_forecasted_data.map(data => data.category),
+            datasets: [{
+                label: 'Predicted Amount',
+                data: monthly_forecasted_data.map(data => data.predicted_amount),
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Yearly Forecast Chart
+    new Chart(document.getElementById('yearlyPredictionChart'), {
+        type: 'bar',
+        data: {
+            labels: weekly_forecasted_data.map(data => data.category),
+            datasets: [{
+                label: 'Predicted Amount',
+                data: yearly_forecasted_data.map(data => data.predicted_amount),
+                backgroundColor: 'rgba(153, 102, 255, 0.2)',
+                borderColor: 'rgba(153, 102, 255, 1)',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Category Chart
+    new Chart(document.getElementById('categoryChart'), {
+        type: 'pie',
+        data: {
+            labels: categoryLabels,
+            datasets: [{
+                data: categoryData,
+                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A', '#B39CD0']
+            }]
+        }
+    });
+
+    // Monthly Expenses Chart
+    new Chart(document.getElementById('monthlyChart'), {
+        type: 'line',
+        data: {
+            labels: monthlyLabels,
+            datasets: [{
+                label: 'Monthly Expenses',
+                data: monthlyData,
+                borderColor: '#418FAE',
+                backgroundColor: 'rgba(65,143,174,0.2)',
+                fill: true,
+                tension: 0.3
+            }]
+        }
+    });
+
+    // Product Expenses Chart
+    new Chart(document.getElementById('productChart'), {
+        type: 'bar',
+        data: {
+            labels: productLabels,
+            datasets: [{
+                label: 'Expenses',
+                data: productData,
+                backgroundColor: ['#F28B82', '#F6A85D', '#FFD166', '#9AE3B4', '#A4C25A']
+            }]
+        },
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '$' + value;
+                        }
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: false
+                }
+            }
+        }
+    });
+
+    // Modal logic
+    function openReportModal() {
+        document.getElementById('reportModal').style.display = 'block';
+    }
+
+    function closeReportModal() {
+        document.getElementById('reportModal').style.display = 'none';
+    }
+
+    document.querySelectorAll('input[name="report_type"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            const type = this.value;
+            document.getElementById('yearSelection').style.display = (type === 'yearly' || type === 'monthly') ? 'block' : 'none';
+            document.getElementById('monthSelection').style.display = (type === 'monthly') ? 'block' : 'none';
+            document.getElementById('rangeSelection').style.display = (type === 'range') ? 'block' : 'none';
+        });
+    });
+
+    function submitReport() {
+        const type = document.querySelector('input[name="report_type"]:checked').value;
+        document.getElementById('report_type').value = type;
+
+        if (type === 'yearly') {
+            document.getElementById('report_year').value = document.getElementById('reportYear').value;
+        } else if (type === 'monthly') {
+            document.getElementById('report_month').value = document.getElementById('reportMonth').value;
+        } else if (type === 'range') {
+            document.getElementById('report_start_date').value = document.getElementById('startDate').value;
+            document.getElementById('report_end_date').value = document.getElementById('endDate').value;
+        }
+
+        // Submit the form
+        document.getElementById('reportForm').submit();
+    }
+</script>
+
 {% endblock %}
