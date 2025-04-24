@@ -7,12 +7,75 @@
 <div class="container">
     <form method="post">
         {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn btn-primary">Save Changes</button>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Product Name</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><input type="date" name="date_1" value="{{ expense.date|date:'Y-m-d' }}" required></td>
+                    <td>
+                        <select name="category_1" id="category_1" onchange="toggleCustomCategory()">
+                            <option value="">Select Category</option>
+                            {% for category in categories %}
+                                <option value="{{ category.name }}" {% if category.name == expense.category.name %}selected{% endif %}>{{ category.name }}</option>
+                            {% endfor %}
+                            <option value="Custom" {% if 'Custom' == expense.category.name %}selected{% endif %}>Custom</option>
+                        </select>
+                        <div id="custom_category_container" style="display: {% if expense.category.name == 'Custom' %}block{% else %}none{% endif %};">
+                            <input type="text" name="custom_category_1" placeholder="Enter custom category" 
+                            {% if expense.category.name == 'Custom' %}value="{{ expense.category.name }}"{% endif %}>
+                        </div>
+                    </td>
+                    <td><input type="number" name="amount_1" value="{{ expense.amount }}" step="any" required></td>
+                    <td><input type="text" name="product_name_1" value="{{ expense.product_name }}" required></td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="text-center">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+        </div>
     </form>
 </div>
 
+<script>
+    // Function to toggle custom category input visibility
+    function toggleCustomCategory() {
+        var categoryDropdown = document.getElementById('category_1');
+        var customCategoryContainer = document.getElementById('custom_category_container');
+        if (categoryDropdown.value === 'Custom') {
+            customCategoryContainer.style.display = 'block';
+        } else {
+            customCategoryContainer.style.display = 'none';
+        }
+    }
+
+    // Initialize the toggle state based on the current selected value
+    document.addEventListener('DOMContentLoaded', function() {
+        toggleCustomCategory();
+    });
+</script>
+
 <style>
+    .table {
+        width: 100%;
+        margin: 20px 0;
+        border-collapse: collapse;
+    }
+    .table th, .table td {
+        padding: 12px;
+        text-align: left;
+        border: 1px solid #ddd;
+    }
+    .table th {
+        background-color: #418FAE;
+        color: white;
+    }
     .btn-primary {
         background-color: #418FAE;
         color: white;
@@ -24,5 +87,10 @@
     .btn-primary:hover {
         background-color: #367A92;
     }
+    .text-center {
+        text-align: center;
+        margin-top: 20px;
+    }
 </style>
+
 {% endblock %}

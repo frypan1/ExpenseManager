@@ -277,17 +277,126 @@ def recent_expenses(request):
 
     return render(request, 'recent_expenses.html', {'recent_expenses': recent_expenses})
 
+# @login_required
+# def edit_expense(request, expense_id):
+#     expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+#     if request.method == 'POST':
+#         form = ExpenseForm(request.POST, instance=expense)
+#         if form.is_valid():
+#             form.save()
+#             return redirect('recent_expenses')
+#     else:
+#         form = ExpenseForm(instance=expense)
+#     return render(request, 'edit_expense.html', {'form': form})
+
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from .models import Expense, Category
+from .forms import ExpenseForm
+from datetime import datetime
+
 @login_required
 def edit_expense(request, expense_id):
     expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+    
     if request.method == 'POST':
-        form = ExpenseForm(request.POST, instance=expense)
-        if form.is_valid():
-            form.save()
-            return redirect('recent_expenses')
+        entry_count = int(request.POST.get('entry_count', 1))  # Default to 1 entry if not provided
+
+        for i in range(1, entry_count + 1):
+            # Fetch form data for the current entry
+            date_str = request.POST.get(f'date_{i}')
+            selected_category = request.POST.get(f'category_{i}')
+            custom_category = request.POST.get(f'custom_category_{i}')
+            amount = request.POST.get(f'amount_{i}')
+            product_name = request.POST.get(f'product_name_{i}')
+
+            if not (date_str and amount and product_name and (selected_category or custom_category)):
+                continue  # Skip incomplete rows
+
+            # Handle custom category
+            category_name = custom_category if selected_category == 'Custom' and custom_category else selected_category
+
+            # Get or create the category for this user
+            category, _ = Category.objects.get_or_create(
+                name=category_name,
+                user=request.user
+            )
+
+            # Convert date string to date object
+            try:
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                continue  # Skip invalid dates
+
+            # Update the expense with new data (or create a new one if needed)
+            expense.date = date_obj
+            expense.category = category
+            expense.amount = amount
+            expense.product_name = product_name
+            expense.save()
+
+        return redirect('recent_expenses')
+
     else:
+        # On GET request, show the form with current expense data
         form = ExpenseForm(instance=expense)
-    return render(request, 'edit_expense.html', {'form': form})
+
+    # Fetch the user's categories to display them
+    categories = Category.objects.filter(user=request.user)
+    return render(request, 'edit_expense.html', {
+        'form': form,
+        'categories': categories,
+        'expense': expense,  # For pre-selecting the category in the form
+    })
+
+
+# from django.shortcuts import render, get_object_or_404, redirect
+# from django.contrib.auth.decorators import login_required
+# from .models import Expense, Category
+# from .forms import ExpenseForm
+
+# @login_required
+# def edit_expense(request, expense_id):
+#     expense = get_object_or_404(Expense, id=expense_id, user=request.user)
+    
+#     # Fetch the user-specific categories
+#     user_categories = Category.objects.filter(user=request.user)
+    
+#     if request.method == 'POST':
+#         form = ExpenseForm(request.POST, instance=expense)
+#         # Handling category selection for Custom category
+#         selected_category = request.POST.get('category')
+#         custom_category = request.POST.get('custom_category')
+
+#         if selected_category == 'Custom' and custom_category:
+#             # Create a new custom category if needed
+#             category, created = Category.objects.get_or_create(
+#                 name=custom_category,
+#                 user=request.user
+#             )
+#             expense.category = category  # Set the new category to the expense
+        
+#         elif selected_category and selected_category != 'Custom':
+#             # If the selected category is not 'Custom', use the selected category
+#             category = Category.objects.get(name=selected_category, user=request.user)
+#             expense.category = category
+        
+#         # Save the expense after assigning the correct category
+#         if form.is_valid():
+#             form.save()
+#             return redirect('recent_expenses')
+    
+#     else:
+#         # If GET request, pre-populate the form with the current expense data
+#         form = ExpenseForm(instance=expense)
+
+#     # Pass categories and selected category to the template
+#     return render(request, 'edit_expense.html', {
+#         'form': form,
+#         'user_categories': user_categories,
+#         'selected_category': expense.category.name,
+#     })
+
 
 @login_required
 def delete_expense(request, expense_id):
@@ -343,3 +452,53 @@ def generate_report(request):
         response['Content-Disposition'] = f'attachment; filename="{title.replace(" ", "_")}.pdf"'
         pisa.CreatePDF(BytesIO(html.encode("UTF-8")), dest=response, encoding='UTF-8')
         return response
+    
+from django.shortcuts import render, redirect
+from django.contrib.auth.decorators import login_required
+from datetime import datetime
+from .models import Expense, Category
+
+@login_required
+def add_expense(request):
+    if request.method == 'POST':
+        entry_count = int(request.POST.get('entry_count', 0))
+
+        for i in range(1, entry_count + 1):
+            date_str = request.POST.get(f'date_{i}')
+            selected_category = request.POST.get(f'category_{i}')
+            custom_category = request.POST.get(f'custom_category_{i}')
+            amount = request.POST.get(f'amount_{i}')
+            product_name = request.POST.get(f'product_name_{i}')
+
+            if not (date_str and amount and product_name and (selected_category or custom_category)):
+                continue  # Skip incomplete rows
+
+            # Handle custom category
+            category_name = custom_category if selected_category == 'Custom' and custom_category else selected_category
+
+            # Get or create the category for this user
+            category, _ = Category.objects.get_or_create(
+                name=category_name,
+                user=request.user
+            )
+
+            # Convert date string to date object
+            try:
+                date_obj = datetime.strptime(date_str, '%Y-%m-%d').date()
+            except ValueError:
+                continue  # Skip invalid dates
+
+            # Save the expense
+            Expense.objects.create(
+                user=request.user,
+                date=date_obj,
+                category=category,
+                amount=amount,
+                product_name=product_name
+            )
+
+        return redirect('index')
+
+    # On GET: show form with user's categories
+    categories = Category.objects.filter(user=request.user)
+    return render(request, 'add_expense.html', {'categories': categories})

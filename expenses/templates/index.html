@@ -144,7 +144,11 @@
         <form method="POST" enctype="multipart/form-data">
             {% csrf_token %}
             {{ form.as_p }}
-            <button type="submit">Upload</button>
+            <button type="submit">Upload</button>   
+
+            <a href="{% url 'add_expense' %}" style="margin-left: 20px;">
+                <button type="button">Manually Add Expenses</button>
+            </a>
         </form>
     </div>
 

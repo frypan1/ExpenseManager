@@ -1,0 +1,166 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Add Expense | Expensify AI{% endblock %}
+
+{% block content %}
+<h1 style="text-align: center; margin-bottom: 20px;">Add Expense</h1>
+
+<form method="POST" action="{% url 'add_expense' %}" style="max-width: 1000px; margin: auto;">
+    {% csrf_token %}
+    <input type="hidden" id="entry_count" name="entry_count" value="1">
+
+    <table border="1" cellpadding="10" cellspacing="0" style="width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Product Name</th>
+                <th>Action</th>
+            </tr>
+        </thead>
+        <tbody id="expense-rows">
+            <tr id="row-1">
+                <td><input type="date" name="date_1" required></td>
+                <td>
+                    <div id="category-wrapper-1">
+                        <select name="category_1" class="category-select" onchange="toggleCustomCategory(this, 1)" required>
+                            <option value="">-- Select Category --</option>
+                            {% for category in categories %}
+                                <option value="{{ category.name }}">{{ category.name }}</option>
+                            {% endfor %}
+                            <option value="Custom">Custom</option>
+                        </select>
+                    </div>
+                </td>
+                <td><input type="number" step="0.01" name="amount_1" required></td>
+                <td><input type="text" name="product_name_1" required></td>
+                <td><button type="button" onclick="deleteRow(1)" class="btn btn-danger btn-sm">Delete</button></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div style="text-align: center; margin-top: 20px;">
+        <button type="button" onclick="addExpenseRow()">+ Add Row</button><br><br>
+        <button type="submit" style="padding: 10px 30px; background-color: #418FAE; color: white; border: none; border-radius: 6px;">Save Expenses</button>
+    </div>
+</form>
+
+<script>
+    let entryCount = 1;
+
+    function addExpenseRow() {
+        entryCount++;
+        document.getElementById('entry_count').value = entryCount;
+
+        const tbody = document.getElementById('expense-rows');
+        const newRow = document.createElement('tr');
+        newRow.id = `row-${entryCount}`;
+
+        newRow.innerHTML = `
+            <td><input type="date" name="date_${entryCount}" required></td>
+            <td>
+                <div id="category-wrapper-${entryCount}">
+                    <select name="category_${entryCount}" class="category-select" onchange="toggleCustomCategory(this, ${entryCount})" required>
+                        <option value="">-- Select Category --</option>
+                        {% for category in categories %}
+                            <option value="{{ category.name }}">{{ category.name }}</option>
+                        {% endfor %}
+                        <option value="Custom">Custom</option>
+                    </select>
+                </div>
+            </td>
+            <td><input type="number" step="0.01" name="amount_${entryCount}" required></td>
+            <td><input type="text" name="product_name_${entryCount}" required></td>
+            <td><button type="button" onclick="deleteRow(${entryCount})">Delete</button></td>
+        `;
+
+        tbody.appendChild(newRow);
+    }
+
+    function deleteRow(index) {
+        const tbody = document.getElementById('expense-rows');
+        const rows = tbody.getElementsByTagName('tr');
+
+        if (rows.length > 1) {
+            const row = document.getElementById(`row-${index}`);
+            if (row) {
+                row.remove();
+            }
+        } else {
+            alert("At least one expense row is required.");
+        }
+    }
+
+    function toggleCustomCategory(selectEl, index) {
+        const wrapper = document.getElementById(`category-wrapper-${index}`);
+        const existingInput = document.getElementById(`custom-category-${index}`);
+
+        if (selectEl.value === 'Custom') {
+            if (!existingInput) {
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.name = `custom_category_${index}`;
+                input.id = `custom-category-${index}`;
+                input.placeholder = 'Enter custom category';
+                input.required = true;
+                wrapper.appendChild(input);
+            }
+        } else {
+            if (existingInput) {
+                existingInput.remove();
+            }
+        }
+    }
+</script>
+
+<style>
+    .table-responsive {
+        overflow-x: auto;
+    }
+
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .table th, .table td {
+        border: 1px solid #ddd;
+        padding: 12px;
+        text-align: center;
+        white-space: nowrap;
+    }
+
+    .table th {
+        background-color: #418FAE;
+        color: white;
+    }
+
+    .table tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    .btn {
+        padding: 5px 12px;
+        border: none;
+        border-radius: 5px;
+        text-decoration: none;
+        color: white;
+        font-size: 14px;
+    }
+
+    .btn-primary {
+        background-color: #418FAE;
+    }
+
+    .btn-danger {
+        background-color: #d9534f;
+    }
+
+    .btn:hover {
+        opacity: 0.85;
+    }
+</style>
+{% endblock %}
