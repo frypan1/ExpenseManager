@@ -97,7 +97,8 @@
 <h1 style="text-align: center;">Expensify AI Dashboard</h1>
 
 <div class="container">
-    <h2 style="text-align: center;">Welcome, {{ user.username }}!</h2>
+    <!--<h2 style="text-align: center;">Welcome, {{ user.username }}!</h2>-->
+    <h2 style="text-align: center;">Let's Visualise</h2>
 
     <!-- Filter Form -->
     <form method="get" class="filter-form">
@@ -364,7 +365,7 @@
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return '$' + value;
+                            return '₹' + value;
                         }
                     }
                 }

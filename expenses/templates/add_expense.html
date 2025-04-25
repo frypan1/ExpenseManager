@@ -73,7 +73,7 @@
             </td>
             <td><input type="number" step="0.01" name="amount_${entryCount}" required></td>
             <td><input type="text" name="product_name_${entryCount}" required></td>
-            <td><button type="button" onclick="deleteRow(${entryCount})">Delete</button></td>
+            <td><button type="button" class="btn btn-danger btn-sm" onclick="deleteRow(${entryCount})">Delete</button></td>
         `;
 
         tbody.appendChild(newRow);
