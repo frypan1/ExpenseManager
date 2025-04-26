@@ -97,7 +97,6 @@
 <h1 style="text-align: center;">Expensify AI Dashboard</h1>
 
 <div class="container">
-    <!--<h2 style="text-align: center;">Welcome, {{ user.username }}!</h2>-->
     <h2 style="text-align: center;">Let's Visualise</h2>
 
     <!-- Filter Form -->
@@ -235,7 +234,6 @@
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- Chart.js and Modal Logic (unchanged) -->
 <script>
     // Load chart data from context
     const categoryLabels = {{ category_labels|safe }};
@@ -385,34 +383,43 @@
     function openReportModal() {
         document.getElementById('reportModal').style.display = 'block';
     }
-
+    
     function closeReportModal() {
         document.getElementById('reportModal').style.display = 'none';
     }
-
+    
     document.querySelectorAll('input[name="report_type"]').forEach(radio => {
         radio.addEventListener('change', function () {
             const type = this.value;
+    
+            // Show/hide fields based on report type
             document.getElementById('yearSelection').style.display = (type === 'yearly' || type === 'monthly') ? 'block' : 'none';
             document.getElementById('monthSelection').style.display = (type === 'monthly') ? 'block' : 'none';
             document.getElementById('rangeSelection').style.display = (type === 'range') ? 'block' : 'none';
         });
     });
-
+    
     function submitReport() {
         const type = document.querySelector('input[name="report_type"]:checked').value;
+    
         document.getElementById('report_type').value = type;
-
+    
         if (type === 'yearly') {
             document.getElementById('report_year').value = document.getElementById('reportYear').value;
         } else if (type === 'monthly') {
+            document.getElementById('report_year').value = document.getElementById('reportYear').value;
             document.getElementById('report_month').value = document.getElementById('reportMonth').value;
         } else if (type === 'range') {
             document.getElementById('report_start_date').value = document.getElementById('startDate').value;
             document.getElementById('report_end_date').value = document.getElementById('endDate').value;
         }
-
-        // Submit the form
+    
+        // Capture charts before submitting
+        document.getElementById('category_chart_image').value = document.getElementById('categoryChart').toDataURL('image/png');
+        document.getElementById('monthly_chart_image').value = document.getElementById('monthlyChart').toDataURL('image/png');
+        document.getElementById('product_chart_image').value = document.getElementById('productChart').toDataURL('image/png');
+    
+        // Now submit
         document.getElementById('reportForm').submit();
     }
 </script>

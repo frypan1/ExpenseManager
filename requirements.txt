@@ -11,3 +11,5 @@ weasyprint
 pango
 xhtml2pdf
 prophet
+fbprophet
+django-easy-pdf

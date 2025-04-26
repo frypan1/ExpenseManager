@@ -6,8 +6,13 @@
     <meta charset="UTF-8">
     <title>Expense Report</title>
     <style>
+        @font-face {
+            font-family: 'DejaVuSans';
+            src: url("{% static 'fonts/DejaVuSans.ttf' %}");
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'DejaVuSans' ,Arial, sans-serif;
             padding: 20px;
             background-color: #ffffff;
             font-size: 14px;
@@ -94,7 +99,7 @@
     <h1>Expense Report</h1>
 
     <div class="info">
-        <p>Report Type: {{ report_type|title }}</p>
+        <!--<p>Report Type: {{ report_type|title }}</p>-->
         {% if selected_year %}
             <p>Year: {{ selected_year }}</p>
         {% endif %}
@@ -130,7 +135,7 @@
                 <th class="date">Date</th>
                 <th class="category">Category</th>
                 <th class="product">Product</th>
-                <th class="amount">Amount (₹)</th>
+                <th class="amount">Amount (INR)</th>
             </tr>
         </thead>
         <tbody>
@@ -149,7 +154,7 @@
         </tbody>
     </table>
 
-    <p class="total">Total Expenses: ₹ {{ total }}</p>
+    <p class="total">Total Expenses: INR {{ total }}</p>
 
 </body>
 </html>

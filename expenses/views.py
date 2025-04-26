@@ -406,6 +406,200 @@ def delete_expense(request, expense_id):
         return redirect('recent_expenses')
     return render(request, 'confirm_delete.html', {'expense': expense})
 
+# import base64
+# from django.shortcuts import render
+# from django.http import HttpResponse
+# from django.template.loader import render_to_string
+# from io import BytesIO
+# from xhtml2pdf import pisa
+# from django.db.models import Sum
+# from django.core.files.storage import default_storage
+# from django.core.files.base import ContentFile
+# from .models import Expense
+
+# # Helper function to base64 encode the image
+# def get_base64_image(image_path):
+#     with open(image_path, "rb") as image_file:
+#         return base64.b64encode(image_file.read()).decode("utf-8")
+
+# def generate_report(request):
+#     if request.method == 'POST':
+#         report_type = request.POST.get('report_type')
+#         year = request.POST.get('year')
+#         month = request.POST.get('month')
+#         start_date = request.POST.get('start_date')
+#         end_date = request.POST.get('end_date')
+#         category_chart = request.POST.get('category_chart_image')  # Image Path/URL
+#         monthly_chart = request.POST.get('monthly_chart_image')    # Image Path/URL
+#         product_chart = request.POST.get('product_chart_image')    # Image Path/URL
+
+#         expenses = []
+#         title = "Expense Report"
+#         subtitle = ""
+
+#         user = request.user  # Get the logged-in user
+
+#         if report_type == 'yearly' and year:
+#             expenses = Expense.objects.filter(user=user, date__year=year)
+#             subtitle = f"Year: {year}"
+#         elif report_type == 'monthly' and year and month:
+#             expenses = Expense.objects.filter(user=user, date__year=year, date__month=month)
+#             subtitle = f"Month: {month}/{year}"
+#         elif report_type == 'range' and start_date and end_date:
+#             expenses = Expense.objects.filter(user=user, date__range=[start_date, end_date])
+#             subtitle = f"From {start_date} to {end_date}"
+
+#         total_amount = sum(e.amount for e in expenses)
+
+#         top_products = Expense.objects.filter(user=user) \
+#             .values('product_name') \
+#             .annotate(total_spent=Sum('amount')) \
+#             .order_by('-total_spent')[:5]
+
+#         product_labels = [product['product_name'] for product in top_products]
+#         product_data = [product['total_spent'] for product in top_products]
+
+#         # Convert the chart images to base64 encoding
+#         category_chart_base64 = get_base64_image(category_chart) if category_chart else None
+#         monthly_chart_base64 = get_base64_image(monthly_chart) if monthly_chart else None
+#         product_chart_base64 = get_base64_image(product_chart) if product_chart else None
+
+#         # Pass the base64 encoded images
+#         html = render_to_string("report_template.html", {
+#             "expenses": expenses,
+#             "total": total_amount,
+#             "title": title,
+#             "subtitle": subtitle,
+#             "category_chart": category_chart_base64,
+#             "monthly_chart": monthly_chart_base64,
+#             "product_chart": product_chart_base64,
+#             "product_labels": product_labels,
+#             "product_data": product_data,
+#             "report_type": report_type,
+#             "selected_year": year,
+#             "selected_month": month,
+#             "start_date": start_date,
+#             "end_date": end_date,
+#         })
+
+#         result = BytesIO()
+#         pisa_status = pisa.CreatePDF(html, dest=result, encoding='UTF-8')
+
+#         if pisa_status.err:
+#             return HttpResponse('Error generating PDF', status=500)
+
+#         response = HttpResponse(result.getvalue(), content_type='application/pdf')
+#         response['Content-Disposition'] = f'attachment; filename="{title.replace(' ', '_')}.pdf"'
+#         return response
+
+#     return HttpResponse('Invalid Request Method', status=405)
+
+# import base64
+# from django.template.loader import render_to_string
+# from django.http import HttpResponse
+# from xhtml2pdf import pisa
+# from io import BytesIO
+# from django.db.models import Sum
+# from django.db.models import Q
+# from .models import Expense
+
+# # Function to convert image to base64
+# def image_to_base64(image_path):
+#     try:
+#         with open(image_path, "rb") as img_file:
+#             return base64.b64encode(img_file.read()).decode('utf-8')
+#     except Exception as e:
+#         print(f"Error encoding image {image_path}: {e}")
+#         return None
+
+# def generate_report(request):
+#     if request.method == 'POST':
+#         report_type = request.POST.get('report_type')
+#         year = request.POST.get('year')
+#         month = request.POST.get('month')
+#         start_date = request.POST.get('start_date')
+#         end_date = request.POST.get('end_date')
+#         category_chart = request.POST.get('category_chart_image')  # base64
+#         monthly_chart = request.POST.get('monthly_chart_image')
+#         product_chart = request.POST.get('product_chart_image')
+
+#         expenses = []
+#         title = "Expense Report"
+#         subtitle = ""
+
+#         # Filter expenses by the logged-in user
+#         user = request.user
+
+#         # Conditional query construction using Q objects
+#         query_conditions = Q(user=user)
+
+#         # Filter expenses based on report type
+#         if report_type == 'yearly' and year:
+#             query_conditions &= Q(date__year=year)
+#             subtitle = f"Year: {year}"
+
+#         elif report_type == 'monthly' and year and month:
+#             query_conditions &= Q(date__year=year, date__month=month)
+#             subtitle = f"Month: {month}/{year}"
+
+#         elif report_type == 'range' and start_date and end_date:
+#             query_conditions &= Q(date__range=[start_date, end_date])
+#             subtitle = f"From {start_date} to {end_date}"
+
+#         # Get the expenses based on the conditions
+#         expenses = Expense.objects.filter(query_conditions).order_by('date')
+
+#         # Calculate the total amount of expenses
+#         total_amount = sum(e.amount for e in expenses)
+
+#         # Get top products for the chart (Top 5 products)
+#         top_products = Expense.objects.filter(user=user) \
+#             .values('product_name') \
+#             .annotate(total_spent=Sum('amount')) \
+#             .order_by('-total_spent')[:5]
+
+#         product_labels = [product['product_name'] for product in top_products]
+#         product_data = [product['total_spent'] for product in top_products]
+
+#         # Convert the chart images to base64
+#         category_chart_base64 = image_to_base64(category_chart) if category_chart else None
+#         monthly_chart_base64 = image_to_base64(monthly_chart) if monthly_chart else None
+#         product_chart_base64 = image_to_base64(product_chart) if product_chart else None
+
+#         # Render the PDF HTML with the data
+#         html = render_to_string("report_template.html", {
+#             "expenses": expenses,
+#             "total": total_amount,
+#             "title": title,
+#             "subtitle": subtitle,
+#             "category_chart": category_chart_base64,
+#             "monthly_chart": monthly_chart_base64,
+#             "product_chart": product_chart_base64,
+#             "product_labels": product_labels,
+#             "product_data": product_data,
+#         })
+
+#         try:
+#             # Generate the PDF and return as response
+#             response = HttpResponse(content_type='application/pdf')
+#             response['Content-Disposition'] = f'attachment; filename="{title.replace(" ", "_")}.pdf"'
+
+#             pisa.CreatePDF(BytesIO(html.encode("UTF-8")), dest=response, encoding='UTF-8')
+#             return response
+#         except Exception as e:
+#             print(f"Error generating PDF: {e}")
+#             return HttpResponse('Error generating report', status=500)
+
+#     return HttpResponse('Invalid Request Method', status=405)
+
+import base64
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from xhtml2pdf import pisa
+from io import BytesIO
+from .models import Expense
+
+
 def generate_report(request):
     if request.method == 'POST':
         report_type = request.POST.get('report_type')
@@ -413,7 +607,7 @@ def generate_report(request):
         month = request.POST.get('month')
         start_date = request.POST.get('start_date')
         end_date = request.POST.get('end_date')
-        category_chart = request.POST.get('category_chart_image')
+        category_chart = request.POST.get('category_chart_image')  # base64
         monthly_chart = request.POST.get('monthly_chart_image')
         product_chart = request.POST.get('product_chart_image')
 
@@ -421,21 +615,28 @@ def generate_report(request):
         title = "Expense Report"
         subtitle = ""
 
+        user = request.user  # Get the logged-in user
+
         if report_type == 'yearly' and year:
-            expenses = Expense.objects.filter(date__year=year)
+            expenses = Expense.objects.filter(user=user, date__year=year)
             subtitle = f"Year: {year}"
+
         elif report_type == 'monthly' and year and month:
-            expenses = Expense.objects.filter(date__year=year, date__month=month)
+            expenses = Expense.objects.filter(user=user, date__year=year, date__month=month)
             subtitle = f"Month: {month}/{year}"
+
         elif report_type == 'range' and start_date and end_date:
-            expenses = Expense.objects.filter(date__range=[start_date, end_date])
+            expenses = Expense.objects.filter(user=user, date__range=[start_date, end_date])
             subtitle = f"From {start_date} to {end_date}"
 
         total_amount = sum(e.amount for e in expenses)
-        top_products = Expense.objects.values('product_name').annotate(total_spent=Sum('amount')).order_by('-total_spent')[:5]
+
+        # Product data for the chart (Top 5 products)
+        top_products = Expense.objects.filter(user=user).values('product_name').annotate(total_spent=Sum('amount')).order_by('-total_spent')[:5]
         product_labels = [product['product_name'] for product in top_products]
         product_data = [product['total_spent'] for product in top_products]
 
+        # Render PDF HTML
         html = render_to_string("report_template.html", {
             "expenses": expenses,
             "total": total_amount,
@@ -446,12 +647,21 @@ def generate_report(request):
             "product_chart": product_chart,
             "product_labels": product_labels,
             "product_data": product_data,
+            "selected_year": year,          # <-- Add this
+            "selected_month": month,        # <-- Add this
+            "start_date": start_date,        # <-- Add this
+            "end_date": end_date,
         })
 
+        # Generate PDF
         response = HttpResponse(content_type='application/pdf')
         response['Content-Disposition'] = f'attachment; filename="{title.replace(" ", "_")}.pdf"'
+
         pisa.CreatePDF(BytesIO(html.encode("UTF-8")), dest=response, encoding='UTF-8')
         return response
+
+
+
     
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
